@@ -1,0 +1,2019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tao Easter Event</title>
+<meta property="og:title" content="Tao Easter Event">
+<meta property="og:description" content="Eat or be eaten. Multiplayer egg game on Bittensor.">
+<meta property="og:image" content="https://ee.taoswap.org/og-image.png">
+<meta property="og:url" content="https://ee.taoswap.org">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Tao Easter Event">
+<meta name="twitter:description" content="Eat or be eaten. Multiplayer egg game on Bittensor.">
+<meta name="twitter:image" content="https://ee.taoswap.org/og-image.png">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Lexend:wght@300;400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1a2e;
+    --glass: rgba(30, 30, 50, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --text: #fffffe;
+    --text-dim: rgba(255, 255, 255, 0.5);
+    --accent: #ff7a1a;
+    --accent2: #ffbf1a;
+    --teal: #00dbbc;
+    --purple: #8b5cf6;
+    --pastel-pink: #fbb4c4;
+    --pastel-blue: #b4d4fb;
+    --pastel-green: #b4fbd4;
+    --pastel-yellow: #fbf0b4;
+    --pastel-purple: #d4b4fb;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Lexend', sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    cursor: none;
+  }
+
+  /* ── Screens ── */
+  .screen {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+    background: radial-gradient(ellipse at 30% 20%, rgba(139,92,246,0.15), transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(255,122,26,0.1), transparent 60%),
+                var(--bg);
+    transition: opacity 0.4s;
+  }
+  .screen.hidden { opacity: 0; pointer-events: none; }
+
+  .panel {
+    position: relative;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+    max-width: 420px;
+    width: 90%;
+    backdrop-filter: blur(20px);
+  }
+
+  .panel h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    background: linear-gradient(135deg, #ff3b1a, #ff7a1a, #ffbf1a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .panel .subtitle {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-bottom: 28px;
+    font-weight: 300;
+  }
+
+  .panel input {
+    width: 100%;
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+    font-family: 'Lexend', sans-serif;
+    font-size: 16px;
+    outline: none;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+  .panel input:focus { border-color: var(--accent); }
+  .panel input::placeholder { color: var(--text-dim); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 32px;
+    border-radius: 12px;
+    border: none;
+    font-family: 'Lexend', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    width: 100%;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+
+  .btn-play {
+    background: linear-gradient(135deg, #ff3b1a, #ff7a1a, #ffbf1a);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(255,122,26,0.3);
+  }
+  .btn-play:hover { box-shadow: 0 6px 30px rgba(255,122,26,0.45); }
+
+  .btn-twitter {
+    background: #1da1f2;
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(29,161,242,0.3);
+    margin-top: 12px;
+  }
+
+  .btn-secondary {
+    background: rgba(255,255,255,0.08);
+    color: var(--text);
+    border: 1px solid var(--glass-border);
+    margin-top: 8px;
+  }
+
+  /* ── HUD ── */
+  #hud {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 16px 20px;
+    pointer-events: none;
+    z-index: 50;
+  }
+
+  .hud-box {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    padding: 12px 16px;
+    backdrop-filter: blur(12px);
+    pointer-events: auto;
+  }
+
+  .timer {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--accent2);
+  }
+  .timer.urgent { color: #ef4444; animation: pulse 1s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+  @keyframes eggBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+  @keyframes eggWaddle {
+    0%, 100% { transform: translateY(0) rotate(-3deg); }
+    25% { transform: translateY(-4px) rotate(2deg); }
+    50% { transform: translateY(0) rotate(3deg); }
+    75% { transform: translateY(-3px) rotate(-2deg); }
+  }
+  .waiting-eggs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 16px 0;
+    flex-wrap: wrap;
+  }
+  .waiting-egg {
+    animation: eggWaddle 1.2s ease-in-out infinite;
+    opacity: 0.9;
+  }
+
+  .score-display {
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+  .score-display span { color: var(--text); font-weight: 600; font-size: 18px; }
+
+  .leaderboard-hud { min-width: 180px; }
+  .leaderboard-hud h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .lb-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 3px 0;
+    gap: 12px;
+  }
+  .lb-row .rank { color: var(--accent); font-family: 'DM Mono', monospace; width: 18px; }
+  .lb-row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-row .pts { color: var(--text-dim); font-family: 'DM Mono', monospace; }
+  .lb-row.me { color: var(--accent2); font-weight: 600; }
+
+  /* ── Game Over ── */
+  .final-leaderboard {
+    text-align: left;
+    margin: 20px 0;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  .final-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    margin-bottom: 4px;
+    font-size: 14px;
+  }
+  .final-row:nth-child(1) { background: rgba(255,191,26,0.15); }
+  .final-row:nth-child(2) { background: rgba(192,192,192,0.1); }
+  .final-row:nth-child(3) { background: rgba(205,127,50,0.1); }
+  .final-row img {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--glass-border);
+  }
+  .final-row .f-rank { width: 24px; font-family: 'DM Mono', monospace; color: var(--accent); }
+  .final-row .f-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .final-row .f-score { font-family: 'DM Mono', monospace; color: var(--text-dim); }
+  .final-row .f-kills { font-family: 'DM Mono', monospace; color: var(--purple); font-size: 12px; }
+
+  .your-result {
+    background: linear-gradient(135deg, rgba(255,122,26,0.1), rgba(255,191,26,0.1));
+    border: 1px solid rgba(255,122,26,0.2);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+  .your-result .big { font-size: 32px; font-weight: 700; color: var(--accent2); }
+  .your-result .label { font-size: 12px; color: var(--text-dim); }
+
+  /* ── Eaten overlay ── */
+  #eaten-overlay {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(15,14,23,0.8);
+    z-index: 80;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  #eaten-overlay.show { opacity: 1; }
+  #eaten-overlay .msg {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--pastel-pink);
+  }
+  #eaten-overlay .by { color: var(--text-dim); font-size: 14px; margin-top: 6px; }
+
+  /* ── Minimap ── */
+  #minimap {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    width: 140px;
+    height: 140px;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    z-index: 50;
+    pointer-events: none;
+  }
+
+  /* ── Logo ── */
+  .logo-container {
+    margin-bottom: 20px;
+  }
+  .logo-container svg { width: 60px; height: 60px; }
+
+  /* ── Skin picker ── */
+  .skin-picker {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .skin-swatch {
+    width: 28px; height: 34px;
+    border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+  }
+  .skin-swatch:hover { transform: scale(1.15); }
+  .skin-swatch.selected { border-color: #fff; transform: scale(1.2); }
+  .skin-swatch.custom {
+    background: conic-gradient(#ff3b1a, #ffbf1a, #4ade80, #00dbbc, #b4d4fb, #8b5cf6, #ff3b1a);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+  .avatar-panel {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    max-height: 90px;
+    overflow-y: auto;
+    padding: 8px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+  }
+  .avatar-opt {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+    object-fit: cover;
+    background: rgba(255,255,255,0.05);
+  }
+  .avatar-opt:hover { transform: scale(1.15); }
+  .avatar-opt.selected { border-color: var(--accent); transform: scale(1.2); }
+
+  /* ── Wallet buttons ── */
+  .wallet-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+  .wallet-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+    font-family: 'Lexend', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .wallet-btn:hover {
+    background: rgba(255,122,26,0.1);
+    border-color: rgba(255,122,26,0.3);
+  }
+  .wallet-btn.disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .wallet-btn.disabled:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: var(--glass-border);
+  }
+  .wallet-btn.connected {
+    background: rgba(255,122,26,0.15);
+    border-color: rgba(255,122,26,0.4);
+    color: var(--accent);
+  }
+  .wallet-btn .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--teal);
+  }
+  .account-select {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    margin-bottom: 12px;
+    appearance: none;
+    cursor: pointer;
+  }
+  .account-select:focus { border-color: var(--accent); }
+  .wallet-status {
+    font-size: 11px;
+    color: var(--teal);
+    margin-bottom: 12px;
+  }
+  .no-wallets {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+  /* ── Global leaderboard ── */
+  .global-lb-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+  .global-lb-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+  .global-lb-row:nth-child(2) { background: rgba(255,191,26,0.1); }
+  .global-lb-row:nth-child(3) { background: rgba(192,192,192,0.06); }
+  .global-lb-row:nth-child(4) { background: rgba(205,127,50,0.06); }
+  .global-lb-row .glb-rank { width: 20px; font-family: 'DM Mono', monospace; color: var(--accent); font-size: 12px; }
+  .global-lb-row .glb-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .global-lb-row .glb-xp { font-family: 'DM Mono', monospace; color: var(--teal); font-size: 12px; }
+  .player-stats {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .stat-box {
+    flex: 1;
+    text-align: center;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 14px 8px 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.4;
+  }
+  .stat-box .icon {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+  .stat-box .val {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent2);
+    font-family: 'DM Mono', monospace;
+    line-height: 1.1;
+  }
+  .stat-box .lbl {
+    font-size: 9px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-top: 4px;
+  }
+  .stat-box:nth-child(1) .val { color: var(--teal); }
+  .stat-box:nth-child(2) .val { color: var(--accent2); }
+  .stat-box:nth-child(3) .val { color: var(--purple); }
+  .link-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: 'Lexend', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-top: 12px;
+  }
+  .link-btn:hover { color: var(--accent); }
+  .xp-hud {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .xp-hud span { color: var(--teal); font-weight: 600; }
+
+  /* ── Divider ── */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--glass-border);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ── Join Screen ── -->
+<div id="join-screen" class="screen">
+  <div class="panel">
+    <div class="logo-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="430 320 1186 1350">
+        <defs><linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ff3b1a"/><stop offset="55%" stop-color="#ff7a1a"/><stop offset="100%" stop-color="#ffbf1a"/>
+        </linearGradient></defs>
+        <path fill="url(#grad)" fill-rule="evenodd" d="M 1022 325 L 432 574 L 431 992 L 445 1091 L 475 1183 L 527 1282 L 595 1372 L 678 1455 L 776 1531 L 887 1600 L 1026 1669 L 1211 1570 L 1351 1470 L 1452 1371 L 1498 1313 L 1544 1241 L 1590 1134 L 1612 1033 L 1616 986 L 1616 576 ZM 1020 402 L 1029 402 L 1547 623 L 1545 1014 L 1527 1101 L 1483 1206 L 1415 1307 L 1377 1350 L 1306 1417 L 1185 1505 L 1027 1592 L 1001 1583 L 921 1541 L 813 1473 L 718 1397 L 636 1313 L 578 1233 L 538 1156 L 512 1076 L 498 981 L 498 624 Z"/>
+        <g fill="url(#grad)" transform="translate(650 650) scale(32)"><path d="M3.9,0C1.8,0,0,1.8,0,4h17.6c2.2,0,3.9-1.8,3.9-4C21.6,0,3.9,0,3.9,0z M13.1,17.7V8.3c0-2.4-1.9-4.3-4.3-4.3v15.1c0,2.2,1.7,4,3.9,4c0.1,0,0.1,0,0.2,0c1,0.1,2.1-0.2,2.9-0.9C13.3,22,13.1,20.5,13.1,17.7L13.1,17.7z"/></g>
+      </svg>
+    </div>
+    <div id="online-count" style="position:absolute;top:14px;right:18px;font-size:11px;color:#4ade80;display:none"></div>
+    <h1>Easter Event</h1>
+    <div class="subtitle">Eat or be eaten. Bittensor edition.</div>
+
+    <!-- Returning wallet player -->
+    <div id="returning-panel" style="display:none">
+      <div class="player-stats" id="player-stats"></div>
+      <input type="text" id="name-input" placeholder="Enter your name..." maxlength="20" autocomplete="off" spellcheck="false">
+      <div class="skin-picker" id="skin-picker-returning"></div>
+      <div class="avatar-panel" id="avatar-panel-returning" style="display:none"></div>
+      <button class="btn btn-play" id="play-btn">Play</button>
+      <button class="link-btn" id="disconnect-btn">Disconnect wallet</button>
+    </div>
+
+    <!-- Default panel: quick play + wallet connect -->
+    <div id="new-panel">
+      <input type="text" id="guest-name-input" placeholder="Choose a name..." maxlength="20" autocomplete="off" spellcheck="false">
+      <div class="skin-picker" id="skin-picker-new"></div>
+      <div class="avatar-panel" id="avatar-panel-new" style="display:none"></div>
+      <button class="btn btn-play" id="quick-play-btn">Quick Play</button>
+
+      <div class="divider">or connect a wallet</div>
+
+      <div class="wallet-grid" id="wallet-grid"></div>
+      <div class="no-wallets" id="no-wallets" style="display:none">No wallet extension detected. Install Talisman, Polkadot.js, or SubWallet.</div>
+
+      <div id="wallet-connected" style="display:none">
+        <div class="wallet-status" id="wallet-status"></div>
+        <select class="account-select" id="account-select"></select>
+        <button class="btn btn-play" id="wallet-play-btn">Play with Wallet</button>
+      </div>
+    </div>
+
+    <!-- Global leaderboard -->
+    <div id="global-leaderboard" style="margin-top:20px;max-height:250px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- ── Game Over Screen ── -->
+<div id="gameover-screen" class="screen hidden" style="background:rgba(15,14,23,0.75)">
+  <div class="panel" style="max-width:460px">
+    <h1>Game Over</h1>
+    <div class="subtitle" id="go-subtitle"></div>
+    <div class="your-result" id="your-result"></div>
+    <div class="final-leaderboard" id="final-leaderboard"></div>
+    <div id="countdown-display" style="color:var(--accent2);font-size:14px;margin:12px 0;font-family:'DM Mono',monospace"></div>
+    <button class="btn btn-twitter" id="tweet-btn">Share on <svg width="16" height="16" viewBox="0 0 24 24" fill="white" style="vertical-align:middle"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></button>
+    <button class="btn btn-play" id="replay-btn" style="margin-top:12px">Play Again</button>
+    <a class="link-btn" href="/leaderboard" target="_blank" style="display:inline-block">&#127942; Global Leaderboard</a>
+    <button class="link-btn" id="home-btn">Back to Home</button>
+  </div>
+</div>
+
+<!-- ── Eaten Overlay ── -->
+<div id="eaten-overlay">
+  <div style="text-align:center">
+    <div class="msg">You got cracked!</div>
+    <div class="by" id="eaten-by"></div>
+    <div id="respawn-countdown" style="color:var(--text-dim);font-size:12px;margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- ── Claim Dialog ── -->
+<div id="claim-dialog" class="screen hidden" style="z-index:200">
+  <div class="panel" style="max-width:380px">
+    <h1 style="font-size:22px;margin-bottom:12px">Link Account</h1>
+    <div id="claim-body" style="margin-bottom:20px"></div>
+    <button class="btn btn-play" id="claim-yes">Link to my wallet</button>
+    <button class="btn btn-secondary" id="claim-no" style="margin-top:8px">Use a different name</button>
+  </div>
+</div>
+
+<!-- ── HUD ── -->
+<div id="hud" style="display:none">
+  <div class="hud-box">
+    <div class="timer" id="timer">10:00</div>
+    <div class="score-display">Score: <span id="score">0</span></div>
+    <div class="xp-hud">XP: <span id="hud-xp">0</span> | Best: <span id="hud-best">0</span></div>
+    <div class="xp-hud" id="player-count"></div>
+  </div>
+  <div class="hud-box leaderboard-hud">
+    <h3>Leaderboard</h3>
+    <div id="lb-list"></div>
+  </div>
+</div>
+
+<!-- ── Canvas ── -->
+<canvas id="game"></canvas>
+
+<!-- ── Minimap ── -->
+<canvas id="minimap"></canvas>
+
+<script>
+// ═══════════════════════════════════════════════════
+// EE AGARIO CLIENT
+// ═══════════════════════════════════════════════════
+
+const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
+
+// ── Pastel palette ──
+const PASTEL = [
+  '#fbb4c4', '#b4d4fb', '#b4fbd4', '#fbf0b4', '#d4b4fb',
+  '#fbd4b4', '#b4fbf0', '#f0b4fb', '#c4fbb4', '#b4c4fb',
+];
+
+const EGG_PATTERNS = ['dots', 'stripes', 'zigzag', 'plain', 'stars'];
+
+function hueToEggColor(hue) {
+  // Convert hue to pastel: high saturation, high lightness
+  return `hsl(${hue}, 70%, 78%)`;
+}
+function hueToEggStroke(hue) {
+  return `hsl(${hue}, 50%, 60%)`;
+}
+function hueToEggDark(hue) {
+  return `hsl(${hue}, 60%, 45%)`;
+}
+
+// ═══════════════════════════════════════════════════
+// WALLET — Substrate extension detection & connection
+// ═══════════════════════════════════════════════════
+
+const KNOWN_WALLETS = [
+  { key: 'talisman', label: 'Talisman' },
+  { key: 'polkadot-js', label: 'Polkadot.js' },
+  { key: 'subwallet-js', label: 'SubWallet' },
+  { key: 'taostats', label: 'TaoStats' },
+  { key: '@opentensor/bittensor-extension', label: 'Bittensor' },
+];
+
+let walletSigner = null;
+let walletAddress = null;
+let walletSource = null;
+let walletAccounts = [];
+let isGuest = false;
+
+function detectWallets() {
+  const injected = window.injectedWeb3 || {};
+  return KNOWN_WALLETS.filter(w => injected[w.key]);
+}
+
+async function connectWallet(key) {
+  const base = window.injectedWeb3?.[key];
+  if (!base) throw new Error(`Wallet ${key} not found`);
+
+  let extension = base;
+  if (base.enable) {
+    const enabled = await Promise.race([
+      base.enable('EE Agario'),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000)),
+    ]);
+    if (enabled?.accounts) extension = enabled;
+  }
+
+  const accounts = await extension.accounts.get();
+  if (!accounts || accounts.length === 0) throw new Error('No accounts found');
+
+  walletSigner = extension.signer;
+  walletAccounts = accounts;
+  walletSource = key;
+  return accounts;
+}
+
+function saveWalletInfo(address, source) {
+  localStorage.setItem('ee_wallet_address', address);
+  localStorage.setItem('ee_wallet_source', source);
+}
+
+function loadWalletInfo() {
+  const address = localStorage.getItem('ee_wallet_address');
+  const source = localStorage.getItem('ee_wallet_source');
+  return (address && source) ? { address, source } : null;
+}
+
+function clearWalletInfo() {
+  localStorage.removeItem('ee_wallet_address');
+  localStorage.removeItem('ee_wallet_source');
+}
+
+// ═══════════════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════════════
+
+// ── Hue picker ──
+const HUE_PRESETS = [0, 36, 72, 108, 144, 180, 216, 252, 288];
+let selectedHue = HUE_PRESETS[Math.floor(Math.random() * HUE_PRESETS.length)];
+
+function renderSkinPicker(skinContainerId, avatarPanelId) {
+  const skinEl = document.getElementById(skinContainerId);
+  const panelEl = document.getElementById(avatarPanelId);
+
+  // Hue swatches + custom (avatar) swatch
+  const swatches = HUE_PRESETS.map(h =>
+    `<div class="skin-swatch${h === selectedHue && !selectedIdentity ? ' selected' : ''}" data-hue="${h}" style="background:${hueToEggColor(h)};box-shadow:inset 0 -4px 0 ${hueToEggStroke(h)}"></div>`
+  ).join('');
+  const customSwatch = `<div class="skin-swatch custom${selectedIdentity ? ' selected' : ''}" data-action="avatars"></div>`;
+  skinEl.innerHTML = swatches + customSwatch;
+
+  // Avatar panel
+  if (availableIdentities.length > 0) {
+    panelEl.innerHTML = availableIdentities.map((id, i) =>
+      `<img class="avatar-opt${selectedIdentity === id ? ' selected' : ''}" data-idx="${i}" src="${id.image}">`
+    ).join('');
+  }
+
+  // Hue swatch click
+  skinEl.querySelectorAll('.skin-swatch:not(.custom)').forEach(sw => {
+    sw.addEventListener('click', () => {
+      selectedHue = parseInt(sw.dataset.hue);
+      selectedIdentity = null;
+      document.querySelectorAll('.skin-swatch').forEach(s => s.classList.remove('selected'));
+      document.querySelectorAll(`.skin-swatch[data-hue="${selectedHue}"]`).forEach(s => s.classList.add('selected'));
+      panelEl.style.display = 'none';
+    });
+  });
+
+  // Custom swatch click — toggle avatar panel
+  skinEl.querySelector('.skin-swatch.custom').addEventListener('click', () => {
+    panelEl.style.display = panelEl.style.display === 'none' ? 'flex' : 'none';
+    if (!selectedIdentity) {
+      document.querySelectorAll('.skin-swatch').forEach(s => s.classList.remove('selected'));
+      skinEl.querySelector('.skin-swatch.custom').classList.add('selected');
+    }
+  });
+
+  // Avatar click
+  panelEl.querySelectorAll('.avatar-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      const idx = parseInt(opt.dataset.idx);
+      selectedIdentity = availableIdentities[idx];
+      document.querySelectorAll('.skin-swatch').forEach(s => s.classList.remove('selected'));
+      skinEl.querySelector('.skin-swatch.custom').classList.add('selected');
+      panelEl.querySelectorAll('.avatar-opt').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+    });
+  });
+}
+
+// ── Avatar picker ──
+let availableIdentities = [];
+let selectedIdentity = null; // { name, image }
+
+async function fetchIdentities() {
+  try {
+    const res = await fetch('/api/identities');
+    availableIdentities = await res.json() || [];
+  } catch (_) {}
+}
+
+
+let ws = null;
+let myId = null;
+let myName = '';
+let mapSize = 5000;
+let gameRunning = false;
+let isSpectating = false;
+let playerStats = null; // { xp, best_score, games_played }
+
+// Server state (latest snapshot)
+let serverState = null;
+const interpEntities = new Map();
+
+// Particles
+const particles = [];
+
+// Image cache
+const imageCache = new Map();
+const failedImages = new Set();
+
+function loadImage(url) {
+  if (failedImages.has(url)) return null;
+  if (imageCache.has(url)) return imageCache.get(url);
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.src = url;
+  img.onerror = () => { failedImages.add(url); imageCache.delete(url); };
+  imageCache.set(url, img);
+  return img;
+}
+
+// ── Canvas ──
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const miniCanvas = document.getElementById('minimap');
+const miniCtx = miniCanvas.getContext('2d');
+
+function resize() {
+  canvas.width = window.innerWidth * devicePixelRatio;
+  canvas.height = window.innerHeight * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  miniCanvas.width = 140 * devicePixelRatio;
+  miniCanvas.height = 140 * devicePixelRatio;
+  miniCtx.scale(devicePixelRatio, devicePixelRatio);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── Mouse ──
+let mouseX = window.innerWidth / 2;
+let mouseY = window.innerHeight / 2;
+
+window.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+
+// Touch support
+window.addEventListener('touchmove', e => {
+  e.preventDefault();
+  mouseX = e.touches[0].clientX;
+  mouseY = e.touches[0].clientY;
+}, { passive: false });
+
+window.addEventListener('touchstart', e => {
+  mouseX = e.touches[0].clientX;
+  mouseY = e.touches[0].clientY;
+});
+
+// ── Keyboard (split) ──
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && gameRunning && ws && ws.readyState === 1) {
+    e.preventDefault();
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    let dx = mouseX - cx;
+    let dy = mouseY - cy;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    ws.send(JSON.stringify({ type: 'split', dx: dx / len, dy: dy / len }));
+  }
+});
+
+// ── Camera ──
+let camX = 0, camY = 0, camScale = 1;
+let myOwnerId = null;
+
+// ── Connect ──
+function connect(name) {
+  myName = name;
+  localStorage.setItem('ee_last_name', name);
+  ws = new WebSocket(WS_URL);
+
+  ws.onmessage = async (e) => {
+    const msg = JSON.parse(e.data);
+
+    if (msg.type === 'challenge') {
+      if (isGuest) {
+        ws.send(JSON.stringify({ type: 'auth_guest' }));
+      } else {
+        // Sign challenge with wallet extension
+        try {
+          const { signature } = await walletSigner.signRaw({
+            address: walletAddress,
+            data: msg.nonce,
+            type: 'bytes',
+          });
+          ws.send(JSON.stringify({ type: 'auth_wallet', address: walletAddress, signature }));
+        } catch (err) {
+          console.error('Wallet signing failed:', err);
+          ws.close();
+          return;
+        }
+      }
+    }
+
+    if (msg.type === 'auth_ok') {
+      if (msg.player) {
+        playerStats = msg.player;
+        updateStatsDisplay();
+      }
+      ws.send(JSON.stringify({ type: 'join', name, hue: selectedHue, identity: selectedIdentity }));
+    }
+
+    if (msg.type === 'join_error') {
+      alert(msg.message);
+      ws.close();
+      document.getElementById('join-screen').classList.remove('hidden');
+      return;
+    }
+
+    if (msg.type === 'auth_error') {
+      console.error('Auth failed:', msg.message);
+    }
+
+    if (msg.type === 'claim_guest') {
+      const dialog = document.getElementById('claim-dialog');
+      document.getElementById('claim-body').innerHTML = `
+        <div style="font-size:14px;color:var(--text-dim);line-height:1.6">
+          <span style="color:var(--text);font-weight:600">"${esc(msg.name)}"</span> was played as guest.
+        </div>
+        <div class="player-stats" style="margin:16px 0">
+          <div class="stat-box"><div class="val">${msg.xp || 0}</div><div class="lbl">XP</div></div>
+          <div class="stat-box"><div class="val">${msg.best_score || 0}</div><div class="lbl">Best</div></div>
+          <div class="stat-box"><div class="val">${msg.games_played || 0}</div><div class="lbl">Games</div></div>
+        </div>
+        <div style="font-size:13px;color:var(--text-dim)">Link this score to your wallet?</div>
+      `;
+      dialog.classList.remove('hidden');
+      document.getElementById('claim-yes').onclick = () => {
+        dialog.classList.add('hidden');
+        ws.send(JSON.stringify({ type: 'confirm_claim', name: msg.name }));
+      };
+      document.getElementById('claim-no').onclick = () => {
+        dialog.classList.add('hidden');
+        ws.close();
+        document.getElementById('join-screen').classList.remove('hidden');
+      };
+      return;
+    }
+
+    if (msg.type === 'claim_ok') {
+      // Re-send join now that the claim is done
+      ws.send(JSON.stringify({ type: 'join', name: msg.name, hue: selectedHue, identity: selectedIdentity }));
+      return;
+    }
+
+    if (msg.type === 'joined') {
+      myId = msg.id;
+      myOwnerId = msg.id;
+      mapSize = msg.mapSize || 5000;
+      gameRunning = true;
+      isSpectating = false;
+      serverState = null;
+      interpEntities.clear();
+      if (msg.player) {
+        playerStats = msg.player;
+        updateStatsDisplay();
+      }
+      document.getElementById('join-screen').classList.add('hidden');
+      document.getElementById('gameover-screen').classList.add('hidden');
+      document.getElementById('hud').style.display = 'flex';
+      document.getElementById('game').style.filter = '';
+      document.getElementById('replay-btn').style.display = '';
+      document.getElementById('home-btn').style.display = '';
+      document.getElementById('tweet-btn').style.display = '';
+    }
+
+    if (msg.type === 'state') handleState(msg);
+    if (msg.type === 'eaten') showEaten(msg.by?.name || 'someone');
+    if (msg.type === 'gameOver') {
+      isSpectating = true;
+      gameRunning = true; // keep render loop going
+      showGameOver(msg.leaderboard);
+    }
+    if (msg.type === 'waiting') {
+      isSpectating = true;
+      gameRunning = true;
+      // Show waiting overlay with greyscale game behind
+      const goScreen = document.getElementById('gameover-screen');
+      goScreen.classList.remove('hidden');
+      document.getElementById('go-subtitle').textContent = '';
+      const goTitle = goScreen.querySelector('h1');
+      if (goTitle) goTitle.textContent = 'Waiting...';
+      const cd = document.getElementById('countdown-display');
+      if (cd) cd.textContent = msg.message || 'Waiting for next session...';
+      // Show waiting egg characters
+      const resultEl = document.getElementById('your-result');
+      renderWaitingEggs(resultEl);
+      document.getElementById('final-leaderboard').innerHTML = '';
+      document.getElementById('hud').style.display = 'none';
+      document.getElementById('game').style.filter = 'grayscale(0.8) brightness(0.6)';
+      // Hide action buttons during wait
+      document.getElementById('replay-btn').style.display = 'none';
+      document.getElementById('home-btn').style.display = 'none';
+      document.getElementById('tweet-btn').style.display = 'none';
+    }
+    if (msg.type === 'queued') {
+      document.getElementById('join-screen').classList.remove('hidden');
+      document.getElementById('go-subtitle') && (document.getElementById('go-subtitle').textContent = '');
+      alert(`Server full. You are #${msg.position} in the queue.`);
+      return;
+    }
+    if (msg.type === 'spectate') handleSpectate(msg);
+    if (msg.type === 'countdown') {
+      const el = document.getElementById('countdown-display');
+      if (el) el.textContent = msg.seconds > 0 ? `Next game in ${msg.seconds}s...` : '';
+    }
+    if (msg.type === 'newSession') {
+      const el = document.getElementById('countdown-display');
+      if (el) el.textContent = 'New game started!';
+    }
+  };
+
+  ws.onclose = () => {
+    if (gameRunning && !isSpectating) {
+      setTimeout(() => connect(myName), 2000);
+    }
+  };
+}
+
+function updateStatsDisplay() {
+  if (!playerStats) return;
+  document.getElementById('hud-xp').textContent = playerStats.xp || 0;
+  document.getElementById('hud-best').textContent = playerStats.best_score || 0;
+}
+
+function handleSpectate(msg) {
+  // Use spectate data like state but with a fixed camera center
+  serverState = {
+    self: { id: 0, oid: 0, x: msg.mapSize / 2, y: msg.mapSize / 2, r: 50, score: 0, kills: 0, alive: false },
+    entities: msg.entities,
+    food: msg.food,
+    top5: [],
+    time: msg.time,
+    mapSize: msg.mapSize,
+    players: msg.players,
+    bots: msg.bots,
+  };
+  mapSize = msg.mapSize;
+
+  // Update interp entities
+  const seenIds = new Set();
+  for (const e of msg.entities) {
+    seenIds.add(e.id);
+    if (interpEntities.has(e.id)) {
+      const ie = interpEntities.get(e.id);
+      ie.tx = e.x; ie.ty = e.y; ie.tr = e.r;
+      ie.name = e.name; ie.hue = e.hue; ie.oid = e.oid;
+      ie.alive = e.alive; ie.score = e.score; ie.img = e.img;
+    } else {
+      interpEntities.set(e.id, {
+        x: e.x, y: e.y, r: e.r, tx: e.x, ty: e.y, tr: e.r,
+        id: e.id, oid: e.oid, name: e.name, hue: e.hue,
+        alive: e.alive, score: e.score, img: e.img,
+        pattern: EGG_PATTERNS[e.id % EGG_PATTERNS.length],
+      });
+    }
+  }
+  for (const [id] of interpEntities) {
+    if (!seenIds.has(id)) interpEntities.delete(id);
+  }
+}
+
+// ── Handle server state ──
+function handleState(msg) {
+  serverState = msg;
+
+  // Update/create interpolation targets
+  const seenIds = new Set();
+
+  // Track ownerId from self
+  if (msg.self.oid) myOwnerId = msg.self.oid;
+
+  for (const e of msg.entities) {
+    seenIds.add(e.id);
+    if (interpEntities.has(e.id)) {
+      const ie = interpEntities.get(e.id);
+      ie.tx = e.x; ie.ty = e.y; ie.tr = e.r;
+      ie.name = e.name; ie.hue = e.hue; ie.oid = e.oid;
+      ie.alive = e.alive; ie.score = e.score; ie.img = e.img; ie.mr = e.mr;
+    } else {
+      interpEntities.set(e.id, {
+        x: e.x, y: e.y, r: e.r,
+        tx: e.x, ty: e.y, tr: e.r,
+        id: e.id, oid: e.oid, name: e.name, hue: e.hue,
+        alive: e.alive, score: e.score, img: e.img, mr: e.mr,
+        pattern: EGG_PATTERNS[e.id % EGG_PATTERNS.length],
+      });
+    }
+  }
+
+  // Remove entities no longer visible
+  for (const [id] of interpEntities) {
+    if (!seenIds.has(id)) interpEntities.delete(id);
+  }
+
+  // Update HUD
+  updateHUD(msg);
+}
+
+let lastLbUpdate = 0;
+
+function updateHUD(msg) {
+  // Timer
+  const timerEl = document.getElementById('timer');
+  const mins = Math.floor(msg.time / 60);
+  const secs = msg.time % 60;
+  timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+  timerEl.classList.toggle('urgent', msg.time < 60);
+
+  // Score
+  document.getElementById('score').textContent = msg.self.score;
+
+  // Live XP/Best — combine DB stats with current game score
+  const baseXp = playerStats?.xp || 0;
+  const baseBest = playerStats?.best_score || 0;
+  document.getElementById('hud-xp').textContent = baseXp + msg.self.score;
+  document.getElementById('hud-best').textContent = Math.max(baseBest, msg.self.score);
+
+  // Player count + leaderboard — throttle to 2x/sec
+  const now = performance.now();
+  if (now - lastLbUpdate < 500) return;
+  lastLbUpdate = now;
+
+  const total = (msg.players || 0) + (msg.bots || 0);
+  document.getElementById('player-count').textContent =
+    `${msg.players || 0} players \u00b7 ${msg.bots || 0} bots \u00b7 ${total} total`;
+
+  const lbEl = document.getElementById('lb-list');
+  lbEl.innerHTML = msg.top5.map(e => {
+    const validImg = e.img && !e.img.includes('N/A') && !failedImages.has(e.img);
+    const icon = validImg ? `<img src="${esc(e.img)}" style="width:18px;height:18px;border-radius:50%;object-fit:cover" onerror="failedImages.add('${esc(e.img)}');this.outerHTML=miniEggSvg(${e.hue != null ? e.hue : 0},18)">` : miniEggSvg(e.hue != null ? e.hue : 0, 18);
+    return `<div class="lb-row${e.name === myName ? ' me' : ''}">
+      <span class="rank">${e.rank}</span>
+      ${icon}
+      <span class="name">${esc(e.name)}</span>
+      <span class="pts">${e.kills || 0}e ${e.score}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Input loop (send at tick rate) ──
+setInterval(() => {
+  if (!ws || ws.readyState !== 1 || !gameRunning || !serverState || isSpectating) return;
+
+  const self = serverState.self;
+  if (!self || !self.alive) return;
+
+  // Convert mouse screen position to world coordinates
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const worldX = camX + (mouseX - W / 2) / camScale;
+  const worldY = camY + (mouseY - H / 2) / camScale;
+
+  ws.send(JSON.stringify({ type: 'input', tx: Math.round(worldX), ty: Math.round(worldY) }));
+}, 1000 / 20);
+
+// ── Render loop ──
+let lastFrame = performance.now();
+
+function render(now) {
+  requestAnimationFrame(render);
+
+  const dt = (now - lastFrame) / 1000;
+  lastFrame = now;
+
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  if (!gameRunning || !serverState) return;
+
+  // ── Interpolate ──
+  const lerpSpeed = 12;
+  for (const e of interpEntities.values()) {
+    const t = Math.min(1, lerpSpeed * dt);
+    e.x += (e.tx - e.x) * t;
+    e.y += (e.ty - e.y) * t;
+    e.r += (e.tr - e.r) * t;
+  }
+
+  // ── Camera ──
+  if (isSpectating) {
+    // Spectator: zoom out, center of map
+    const targetScale = 0.15;
+    camScale += (targetScale - camScale) * 2 * dt;
+    camX += (mapSize / 2 - camX) * 3 * dt;
+    camY += (mapSize / 2 - camY) * 3 * dt;
+  } else {
+    // Follow center of mass of all owned pieces
+    const myPieces = [...interpEntities.values()].filter(e => e.alive && e.oid === myOwnerId);
+    if (myPieces.length > 0) {
+      let totalMass = 0, comX = 0, comY = 0, maxR = 0;
+      for (const p of myPieces) {
+        const m = p.r * p.r;
+        comX += p.x * m;
+        comY += p.y * m;
+        totalMass += m;
+        if (p.r > maxR) maxR = p.r;
+      }
+      comX /= totalMass;
+      comY /= totalMass;
+
+      const spread = myPieces.length > 1 ? Math.max(...myPieces.map(p => Math.sqrt((p.x - comX) ** 2 + (p.y - comY) ** 2))) : 0;
+      const targetScale = Math.max(0.25, Math.min(0.75, 35 / (maxR + spread * 0.3)));
+      camScale += (targetScale - camScale) * 3 * dt;
+      camX += (comX - camX) * 6 * dt;
+      camY += (comY - camY) * 6 * dt;
+    }
+  }
+
+  ctx.save();
+  ctx.translate(W / 2, H / 2);
+  ctx.scale(camScale, camScale);
+  ctx.translate(-camX, -camY);
+
+  // ── Draw background grid ──
+  drawGrid(ctx, W, H);
+
+  // ── Draw map boundary ──
+  ctx.strokeStyle = 'rgba(255,122,26,0.15)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(0, 0, mapSize, mapSize);
+
+  // ── Draw food (batched) ──
+  if (serverState.food) {
+    drawAllFood(ctx, serverState.food);
+  }
+
+  // ── Draw entities (sorted by radius so big ones are on top) ──
+  const sorted = [...interpEntities.values()]
+    .filter(e => e.alive)
+    .sort((a, b) => a.r - b.r);
+
+  for (const e of sorted) {
+    drawEgg(ctx, e, e.oid === myOwnerId);
+  }
+
+  // ── Draw particles ──
+  updateAndDrawParticles(ctx, dt);
+
+  ctx.restore();
+
+  // ── Custom cursor ──
+  drawCursor(ctx, W, H);
+
+  // ── Minimap (throttled to ~20fps) ──
+  if (!render._fc) render._fc = 0;
+  if (++render._fc % 3 === 0) drawMinimap();
+}
+
+// ── Custom cursor (crosshair + direction line from egg) ──
+function drawCursor(ctx, W, H) {
+  // Use center of mass of all owned pieces
+  const myPieces = [...interpEntities.values()].filter(e => e.alive && e.oid === myOwnerId);
+  if (myPieces.length === 0) return;
+
+  let totalMass = 0, comX = 0, comY = 0;
+  for (const p of myPieces) {
+    const m = p.r * p.r;
+    comX += p.x * m; comY += p.y * m; totalMass += m;
+  }
+  comX /= totalMass; comY /= totalMass;
+
+  const eggScreenX = W / 2 + (comX - camX) * camScale;
+  const eggScreenY = H / 2 + (comY - camY) * camScale;
+
+  const dx = mouseX - eggScreenX;
+  const dy = mouseY - eggScreenY;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  // Direction line from egg to cursor
+  if (dist > 20) {
+    ctx.beginPath();
+    ctx.moveTo(eggScreenX, eggScreenY);
+    ctx.lineTo(mouseX, mouseY);
+    ctx.strokeStyle = 'rgba(255,122,26,0.15)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Crosshair at mouse position
+  const r = 12;
+  ctx.save();
+  ctx.translate(mouseX, mouseY);
+
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Cross lines (4 short segments with gap in center)
+  const gap = 4;
+  const len = 7;
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 1.5;
+  // Top
+  ctx.moveTo(0, -gap); ctx.lineTo(0, -gap - len);
+  // Bottom
+  ctx.moveTo(0, gap); ctx.lineTo(0, gap + len);
+  // Left
+  ctx.moveTo(-gap, 0); ctx.lineTo(-gap - len, 0);
+  // Right
+  ctx.moveTo(gap, 0); ctx.lineTo(gap + len, 0);
+  ctx.stroke();
+
+  // Center dot
+  ctx.beginPath();
+  ctx.arc(0, 0, 2, 0, Math.PI * 2);
+  ctx.fillStyle = '#ff7a1a';
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ── Grid ──
+function drawGrid(ctx, W, H) {
+  const gridSize = 80;
+  ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+  ctx.lineWidth = 1;
+
+  const left = Math.max(0, camX - W / 2 / camScale);
+  const top = Math.max(0, camY - H / 2 / camScale);
+  const right = Math.min(mapSize, camX + W / 2 / camScale);
+  const bottom = Math.min(mapSize, camY + H / 2 / camScale);
+
+  const startX = Math.floor(left / gridSize) * gridSize;
+  const startY = Math.floor(top / gridSize) * gridSize;
+
+  ctx.beginPath();
+  for (let x = startX; x <= right; x += gridSize) {
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+  }
+  for (let y = startY; y <= bottom; y += gridSize) {
+    ctx.moveTo(left, y);
+    ctx.lineTo(right, y);
+  }
+  ctx.stroke();
+}
+
+// ── Food (batched drawing for performance) ──
+function drawAllFood(ctx, food) {
+  if (!food || food.length === 0) return;
+  // Group food by hue bucket (reduce style changes)
+  const buckets = new Map();
+  for (const f of food) {
+    const key = f.hue;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(f);
+  }
+  for (const [hue, items] of buckets) {
+    // Batch fill all food of same hue
+    ctx.beginPath();
+    for (const f of items) {
+      ctx.moveTo(f.x + 5, f.y);
+      ctx.ellipse(f.x, f.y, 5, 6.5, 0, 0, Math.PI * 2);
+    }
+    ctx.fillStyle = hueToEggColor(hue);
+    ctx.fill();
+    ctx.strokeStyle = hueToEggStroke(hue);
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+}
+
+// ── Egg entity ──
+function drawEgg(ctx, e, isMe) {
+  ctx.save();
+  ctx.translate(e.x, e.y);
+
+  // Merge-ready pieces are translucent
+  if (e.mr && isMe) ctx.globalAlpha = 0.5;
+
+  const rx = e.r;
+  const ry = e.r * 1.25; // egg is taller than wide
+
+  // Shadow
+  ctx.beginPath();
+  ctx.ellipse(4, 6, rx * 0.9, ry * 0.3, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fill();
+
+  // Main egg body
+  ctx.beginPath();
+  ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+
+  const grad = ctx.createRadialGradient(-rx * 0.2, -ry * 0.3, 0, 0, 0, ry);
+  grad.addColorStop(0, hueToEggColor(e.hue));
+  grad.addColorStop(1, hueToEggStroke(e.hue));
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Border
+  ctx.strokeStyle = isMe ? '#ff7a1a' : hueToEggStroke(e.hue);
+  ctx.lineWidth = isMe ? 3 : 1.5;
+  ctx.stroke();
+
+  // Pattern decoration
+  drawEggPattern(ctx, e, rx, ry);
+
+  // Avatar image stretched to fill egg shape
+  if (e.img) {
+    const img = loadImage(e.img);
+    if (img && img.complete && img.naturalWidth > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rx * 0.92, ry * 0.92, 0, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.globalAlpha = 0.85;
+      ctx.drawImage(img, -rx, -ry, rx * 2, ry * 2);
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+  // No fallback — the egg itself IS the visual
+
+  // Shine highlight
+  ctx.beginPath();
+  ctx.ellipse(-rx * 0.25, -ry * 0.35, rx * 0.2, ry * 0.15, -0.3, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.fill();
+
+  // Name
+  const fontSize = Math.max(10, Math.min(16, e.r * 0.4));
+  ctx.font = `600 ${fontSize}px Lexend, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Text outline
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  ctx.lineWidth = 3;
+  ctx.strokeText(e.name, 0, ry + fontSize + 4);
+  ctx.fillStyle = '#fff';
+  ctx.fillText(e.name, 0, ry + fontSize + 4);
+
+  // Score badge (if big enough)
+  if (e.r > 25) {
+    const scoreFontSize = Math.max(8, fontSize * 0.7);
+    ctx.font = `400 ${scoreFontSize}px 'DM Mono', monospace`;
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillText(e.score, 0, ry + fontSize + 4 + scoreFontSize + 2);
+  }
+
+  ctx.restore();
+}
+
+// ── Egg patterns ──
+function drawEggPattern(ctx, e, rx, ry) {
+  ctx.save();
+  // Clip to egg shape
+  ctx.beginPath();
+  ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+  ctx.clip();
+
+  const col = hueToEggDark(e.hue);
+  ctx.globalAlpha = 0.15;
+
+  switch (e.pattern) {
+    case 'stripes': {
+      ctx.beginPath();
+      ctx.strokeStyle = col;
+      ctx.lineWidth = rx * 0.12;
+      for (let y = -ry; y <= ry; y += rx * 0.35) {
+        ctx.moveTo(-rx, y);
+        ctx.lineTo(rx, y);
+      }
+      ctx.stroke();
+      break;
+    }
+    case 'dots': {
+      ctx.beginPath();
+      ctx.fillStyle = col;
+      const step = rx * 0.5;
+      for (let x = -rx; x <= rx; x += step) {
+        for (let y = -ry; y <= ry; y += step) {
+          ctx.moveTo(x + rx * 0.08, y);
+          ctx.arc(x, y, rx * 0.08, 0, Math.PI * 2);
+        }
+      }
+      ctx.fill();
+      break;
+    }
+    case 'zigzag': {
+      ctx.beginPath();
+      ctx.strokeStyle = col;
+      ctx.lineWidth = rx * 0.08;
+      for (let y = -ry; y <= ry; y += rx * 0.4) {
+        for (let x = -rx; x <= rx; x += rx * 0.2) {
+          const yy = y + ((x / (rx * 0.2)) % 2 === 0 ? rx * 0.1 : -rx * 0.1);
+          if (x === -rx) ctx.moveTo(x, yy);
+          else ctx.lineTo(x, yy);
+        }
+      }
+      ctx.stroke();
+      break;
+    }
+    case 'stars': {
+      ctx.beginPath();
+      ctx.fillStyle = col;
+      const step2 = rx * 0.5;
+      for (let x = -rx; x <= rx; x += step2) {
+        for (let y = -ry; y <= ry; y += step2) {
+          drawStar(ctx, x, y, rx * 0.08, 5);
+        }
+      }
+      ctx.fill();
+      break;
+    }
+    // 'plain' — no pattern
+  }
+
+  ctx.restore();
+}
+
+function drawStar(ctx, cx, cy, r, points) {
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const angle = (i * Math.PI) / points - Math.PI / 2;
+    const rad = i % 2 === 0 ? r : r * 0.4;
+    const x = cx + Math.cos(angle) * rad;
+    const y = cy + Math.sin(angle) * rad;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ── Particles ──
+function spawnEatParticles(x, y, hue) {
+  for (let i = 0; i < 12; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 50 + Math.random() * 150;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      r: 2 + Math.random() * 4,
+      life: 0.6 + Math.random() * 0.4,
+      maxLife: 0.6 + Math.random() * 0.4,
+      hue: hue + Math.random() * 40 - 20,
+    });
+  }
+}
+
+function updateAndDrawParticles(ctx, dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= 0.96;
+    p.vy *= 0.96;
+    p.life -= dt;
+
+    if (p.life <= 0) {
+      particles.splice(i, 1);
+      continue;
+    }
+
+    const alpha = p.life / p.maxLife;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * alpha, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${p.hue}, 70%, 78%, ${alpha})`;
+    ctx.fill();
+  }
+}
+
+// Track entity count to detect eats (for particles)
+let prevEntityIds = new Set();
+function detectEats() {
+  if (!serverState) return;
+  const currentIds = new Set(serverState.entities.filter(e => e.alive).map(e => e.id));
+  for (const id of prevEntityIds) {
+    if (!currentIds.has(id)) {
+      const ie = interpEntities.get(id);
+      if (ie) spawnEatParticles(ie.x, ie.y, ie.hue);
+    }
+  }
+  prevEntityIds = currentIds;
+}
+
+// Call detectEats on each state update
+const origHandleState = handleState;
+handleState = function(msg) {
+  origHandleState(msg);
+  detectEats();
+};
+
+// ── Minimap ──
+function drawMinimap() {
+  const mW = 140, mH = 140;
+  miniCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  miniCtx.clearRect(0, 0, mW, mH);
+
+  // Background
+  miniCtx.fillStyle = 'rgba(15,14,23,0.6)';
+  miniCtx.fillRect(0, 0, mW, mH);
+
+  // Border
+  miniCtx.strokeStyle = 'rgba(255,122,26,0.15)';
+  miniCtx.lineWidth = 1;
+  miniCtx.strokeRect(0.5, 0.5, mW - 1, mH - 1);
+
+  const scale = mW / mapSize;
+
+  // Entities as dots
+  for (const e of interpEntities.values()) {
+    if (!e.alive) continue;
+    const mx = e.x * scale;
+    const my = e.y * scale;
+    const mr = Math.max(1.5, e.r * scale * 0.8);
+
+    miniCtx.beginPath();
+    miniCtx.arc(mx, my, mr, 0, Math.PI * 2);
+    miniCtx.fillStyle = e.oid === myOwnerId ? '#ff7a1a' : hueToEggColor(e.hue);
+    miniCtx.fill();
+  }
+
+  // Camera viewport
+  if (serverState) {
+    const vw = (window.innerWidth / camScale) * scale;
+    const vh = (window.innerHeight / camScale) * scale;
+    const vx = camX * scale - vw / 2;
+    const vy = camY * scale - vh / 2;
+    miniCtx.strokeStyle = 'rgba(255,255,255,0.2)';
+    miniCtx.lineWidth = 1;
+    miniCtx.strokeRect(vx, vy, vw, vh);
+  }
+}
+
+// ── Eaten overlay ──
+function showEaten(byName) {
+  document.getElementById('eaten-by').textContent = `Eaten by ${byName}`;
+  const overlay = document.getElementById('eaten-overlay');
+  const cd = document.getElementById('respawn-countdown');
+  overlay.classList.add('show');
+  let sec = 4;
+  cd.textContent = `Respawning in ${sec}...`;
+  const iv = setInterval(() => {
+    sec--;
+    if (sec > 0) { cd.textContent = `Respawning in ${sec}...`; }
+    else { cd.textContent = 'Go!'; clearInterval(iv); }
+  }, 1000);
+  setTimeout(() => overlay.classList.remove('show'), 4200);
+}
+
+// ── Game Over ──
+function spawnConfetti() {
+  const container = document.getElementById('gameover-screen');
+  const colors = ['#ff3b1a', '#ff7a1a', '#ffbf1a', '#00dbbc', '#8b5cf6', '#fbb4c4', '#b4d4fb'];
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement('div');
+    const c = colors[Math.floor(Math.random() * colors.length)];
+    const x = Math.random() * 100;
+    const delay = Math.random() * 0.5;
+    const dur = 1.5 + Math.random() * 1.5;
+    Object.assign(el.style, {
+      position: 'fixed', left: x + '%', top: '-10px', width: '8px', height: '8px',
+      background: c, borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+      zIndex: '200', pointerEvents: 'none', opacity: '1',
+      animation: `confettiFall ${dur}s ${delay}s ease-in forwards`,
+    });
+    container.appendChild(el);
+    setTimeout(() => el.remove(), (dur + delay) * 1000);
+  }
+}
+
+function miniEggSvg(hue, size = 28) {
+  const fill = hueToEggColor(hue);
+  const stroke = hueToEggStroke(hue);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 28 28"><ellipse cx="14" cy="15" rx="10" ry="12" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/><ellipse cx="11" cy="10" rx="3" ry="2" fill="rgba(255,255,255,0.4)" transform="rotate(-15,11,10)"/></svg>`;
+}
+
+function waitingEggSvg(hue) {
+  const fill = hueToEggColor(hue);
+  const stroke = hueToEggStroke(hue);
+  // Egg character with little eyes and feet
+  return `<svg width="36" height="48" viewBox="0 0 36 48">
+    <ellipse cx="18" cy="22" rx="13" ry="16" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>
+    <ellipse cx="15" cy="14" rx="4" ry="2.5" fill="rgba(255,255,255,0.4)" transform="rotate(-15,15,14)"/>
+    <circle cx="13" cy="20" r="2" fill="rgba(0,0,0,0.5)"/><circle cx="23" cy="20" r="2" fill="rgba(0,0,0,0.5)"/>
+    <circle cx="13.8" cy="19.3" r="0.8" fill="white"/><circle cx="23.8" cy="19.3" r="0.8" fill="white"/>
+    <ellipse cx="18" cy="25" rx="2.5" ry="1.2" fill="rgba(0,0,0,0.15)"/>
+    <ellipse cx="12" cy="42" rx="4" ry="2.5" fill="${stroke}" rx="4"/><ellipse cx="24" cy="42" rx="4" ry="2.5" fill="${stroke}"/>
+  </svg>`;
+}
+
+function renderWaitingEggs(container) {
+  const count = 3 + Math.floor(Math.random() * 3); // 3-5 eggs
+  let html = '<div class="waiting-eggs">';
+  for (let i = 0; i < count; i++) {
+    const hue = HUE_PRESETS[Math.floor(Math.random() * HUE_PRESETS.length)];
+    const delay = (i * 0.2).toFixed(1);
+    html += `<div class="waiting-egg" style="animation-delay:${delay}s">${waitingEggSvg(hue)}</div>`;
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function showGameOver(leaderboard) {
+  // Don't set gameRunning=false — server auto-rejoins us to the next session
+  document.getElementById('hud').style.display = 'none';
+
+  const screen = document.getElementById('gameover-screen');
+  screen.classList.remove('hidden');
+  screen.querySelector('h1').textContent = 'Game Over';
+  document.getElementById('game').style.filter = '';
+  document.getElementById('replay-btn').style.display = '';
+  document.getElementById('home-btn').style.display = '';
+  document.getElementById('tweet-btn').style.display = '';
+
+  // Find player
+  const me = leaderboard.find(e => e.name === myName);
+  const resultEl = document.getElementById('your-result');
+  if (me) {
+    const trophy = me.rank === 1 ? '\ud83e\udd47' : me.rank === 2 ? '\ud83e\udd48' : me.rank === 3 ? '\ud83e\udd49' : '';
+    resultEl.innerHTML = `
+      <div class="big">${trophy} #${me.rank}</div>
+      <div style="font-size:24px;font-weight:700;color:var(--text);margin:4px 0">${me.score} pts</div>
+      <div class="label">${me.kills} eats</div>
+    `;
+    if (me.rank <= 3) spawnConfetti();
+  }
+
+  document.getElementById('go-subtitle').textContent =
+    `Session ended. ${leaderboard.length} players competed.`;
+
+  // Leaderboard
+  const lbEl = document.getElementById('final-leaderboard');
+  lbEl.innerHTML = leaderboard.slice(0, 15).map(e => {
+    const validImg = e.identity?.image && !e.identity.image.includes('N/A') && !failedImages.has(e.identity.image);
+    const imgHtml = validImg
+      ? `<img src="${esc(e.identity.image)}" alt="" onerror="failedImages.add('${esc(e.identity.image)}');this.outerHTML=miniEggSvg(${e.hue != null ? e.hue : 0})">`
+      : miniEggSvg(e.hue != null ? e.hue : 0);
+    return `<div class="final-row">
+      <span class="f-rank">${e.rank}</span>
+      ${imgHtml}
+      <span class="f-name">${esc(e.name)}${e.isBot ? ' \ud83e\udd16' : ''}</span>
+      <span class="f-kills">${e.kills}e</span>
+      <span class="f-score">${e.score}</span>
+    </div>`;
+  }).join('');
+
+  // Twitter share
+  document.getElementById('tweet-btn').onclick = () => {
+    const rank = me ? me.rank : '?';
+    const score = me ? me.score : 0;
+    const kills = me ? me.kills : 0;
+    const medal = rank === 1 ? '\ud83e\udd47' : rank === 2 ? '\ud83e\udd48' : rank === 3 ? '\ud83e\udd49' : '\ud83c\udf73';
+    const text = `${medal} #${rank} on Tao Easter Event!\n\n\ud83c\udf1f ${score} pts \u00b7 ${kills} eats\n\n\ud83e\udd5a Eat or be eaten \u2014 The #Bittensor egg game by @taoswap_org\n`;
+    const url = 'https://ee.taoswap.org';
+    window.open(
+      `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+      '_blank'
+    );
+  };
+
+  // Play Again — request rejoin (server decides: joined or waiting)
+  document.getElementById('replay-btn').onclick = () => {
+    if (ws && ws.readyState === 1 && ws._authenticated !== false) {
+      ws.send(JSON.stringify({ type: 'join', name: myName, hue: selectedHue, identity: selectedIdentity }));
+    } else {
+      isSpectating = false;
+      screen.classList.add('hidden');
+      connect(myName);
+    }
+  };
+
+  document.getElementById('home-btn').onclick = () => {
+    screen.classList.add('hidden');
+    isSpectating = false;
+    gameRunning = false;
+    if (ws) { ws.close(); ws = null; }
+    document.getElementById('join-screen').classList.remove('hidden');
+    init();
+  };
+}
+
+// ── Escape HTML ──
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+// ═══════════════════════════════════════════════════
+// UI SETUP — Wallet / Guest flow
+// ═══════════════════════════════════════════════════
+
+let allLeaderboardData = [];
+
+async function fetchGlobalLeaderboard() {
+  try {
+    const res = await fetch('/api/leaderboard');
+    allLeaderboardData = await res.json() || [];
+    renderGlobalLeaderboard(false);
+  } catch (_) {}
+}
+
+function renderGlobalLeaderboard(full) {
+  const el = document.getElementById('global-leaderboard');
+  if (allLeaderboardData.length === 0) { el.innerHTML = ''; return; }
+  const list = allLeaderboardData.slice(0, 5);
+  el.innerHTML = `
+    <div class="global-lb-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Top Players</span>
+      <a href="/leaderboard" target="_blank" style="cursor:pointer;font-size:16px;text-decoration:none;letter-spacing:0">\ud83c\udfc6</a>
+    </div>
+    ${list.map((p, i) => `<div class="global-lb-row">
+      <span class="glb-rank">${i + 1}</span>
+      <span class="glb-name">${esc(p.name)}</span>
+      <span class="glb-xp">${p.xp} xp</span>
+    </div>`).join('')}
+  `;
+}
+
+async function init() {
+  fetchGlobalLeaderboard();
+  if (availableIdentities.length === 0) await fetchIdentities();
+  const saved = loadWalletInfo();
+  if (saved) {
+    try {
+      await connectWallet(saved.source);
+      const account = walletAccounts.find(a => a.address === saved.address);
+      if (account) {
+        walletAddress = account.address;
+        // Fetch stats
+        try {
+          const res = await fetch('/api/player/' + encodeURIComponent(walletAddress));
+          playerStats = await res.json();
+        } catch (_) {}
+        showReturningPanel();
+        return;
+      }
+    } catch (_) {}
+    clearWalletInfo();
+  }
+  showNewPanel();
+}
+
+function showReturningPanel() {
+  document.getElementById('new-panel').style.display = 'none';
+  document.getElementById('returning-panel').style.display = 'block';
+
+  const statsEl = document.getElementById('player-stats');
+  if (playerStats) {
+    statsEl.innerHTML = `
+      <div class="stat-box"><div class="icon">&#11088;</div><div class="val">${(playerStats.xp || 0).toLocaleString()}</div><div class="lbl">Total XP</div></div>
+      <div class="stat-box"><div class="icon">&#127942;</div><div class="val">${(playerStats.best_score || 0).toLocaleString()}</div><div class="lbl">Best Score</div></div>
+      <div class="stat-box"><div class="icon">&#127922;</div><div class="val">${playerStats.games_played || 0}</div><div class="lbl">Games</div></div>
+    `;
+    const nameInput = document.getElementById('name-input');
+    nameInput.value = playerStats.name || '';
+    nameInput.readOnly = true;
+    nameInput.style.opacity = '0.6';
+  }
+  renderSkinPicker('skin-picker-returning', 'avatar-panel-returning');
+}
+
+function showNewPanel() {
+  document.getElementById('returning-panel').style.display = 'none';
+  document.getElementById('new-panel').style.display = 'block';
+  document.getElementById('wallet-connected').style.display = 'none';
+  const savedName = localStorage.getItem('ee_last_name');
+  if (savedName) document.getElementById('guest-name-input').value = savedName;
+  renderWalletButtons();
+  renderSkinPicker('skin-picker-new', 'avatar-panel-new');
+}
+
+function renderWalletButtons() {
+  const grid = document.getElementById('wallet-grid');
+  const injected = window.injectedWeb3 || {};
+  document.getElementById('no-wallets').style.display = 'none';
+  grid.innerHTML = KNOWN_WALLETS.map(w => {
+    const installed = !!injected[w.key];
+    return `<button class="wallet-btn${installed ? '' : ' disabled'}" data-wallet="${w.key}" ${installed ? '' : 'title="Install ' + w.label + '"'}>${w.label}</button>`;
+  }).join('');
+
+  grid.querySelectorAll('.wallet-btn').forEach(btn => {
+    if (btn.classList.contains('disabled')) return;
+    btn.addEventListener('click', () => onWalletClick(btn.dataset.wallet));
+  });
+}
+
+async function onWalletClick(key) {
+  const btn = document.querySelector(`.wallet-btn[data-wallet="${key}"]`);
+  try {
+    btn.textContent = 'Connecting...';
+    const accounts = await connectWallet(key);
+
+    // Populate account selector
+    const select = document.getElementById('account-select');
+    select.innerHTML = accounts.map((a, i) =>
+      `<option value="${i}">${a.name ? a.name + ' — ' : ''}${a.address.slice(0, 8)}...${a.address.slice(-6)}</option>`
+    ).join('');
+
+    walletAddress = accounts[0].address;
+    select.onchange = () => {
+      walletAddress = accounts[select.value].address;
+    };
+
+    // Show connected state
+    const label = KNOWN_WALLETS.find(w => w.key === key)?.label || key;
+    document.getElementById('wallet-status').textContent = `Connected with ${label}`;
+    document.getElementById('wallet-connected').style.display = 'block';
+
+    // Mark button as connected
+    document.querySelectorAll('.wallet-btn').forEach(b => b.classList.remove('connected'));
+    btn.classList.add('connected');
+    btn.innerHTML = `<span class="dot"></span>${label}`;
+  } catch (err) {
+    const label = KNOWN_WALLETS.find(w => w.key === key)?.label || key;
+    btn.textContent = label;
+    console.error('Wallet connection failed:', err);
+  }
+}
+
+// Quick Play (guest)
+document.getElementById('quick-play-btn').addEventListener('click', () => {
+  isGuest = true;
+  walletAddress = null;
+  walletSigner = null;
+  const name = document.getElementById('guest-name-input').value.trim() || 'Anon';
+  connect(name);
+});
+
+document.getElementById('guest-name-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('quick-play-btn').click();
+});
+
+// Play with Wallet
+document.getElementById('wallet-play-btn').addEventListener('click', () => {
+  if (!walletSigner || !walletAddress) return;
+  isGuest = false;
+  saveWalletInfo(walletAddress, walletSource);
+  const name = document.getElementById('guest-name-input').value.trim() || 'Anon';
+  connect(name);
+});
+
+// Returning player — play
+document.getElementById('play-btn').addEventListener('click', () => {
+  isGuest = false;
+  const name = document.getElementById('name-input').value.trim() || 'Anon';
+  connect(name);
+});
+
+document.getElementById('name-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('play-btn').click();
+});
+
+// Disconnect wallet
+document.getElementById('disconnect-btn').addEventListener('click', () => {
+  clearWalletInfo();
+  walletSigner = null;
+  walletAddress = null;
+  walletSource = null;
+  walletAccounts = [];
+  playerStats = null;
+  showNewPanel();
+});
+
+// Online count polling
+async function updateOnlineCount() {
+  try {
+    const res = await fetch('/api/online');
+    const { online, playing } = await res.json();
+    const el = document.getElementById('online-count');
+    if (el) {
+      if (online > 0) {
+        el.innerHTML = `\u25cf ${online} online`;
+        el.style.display = '';
+      } else {
+        el.style.display = 'none';
+      }
+    }
+  } catch (_) {}
+}
+updateOnlineCount();
+setInterval(updateOnlineCount, 5000);
+
+// Init — wait for extensions to inject (they load async)
+setTimeout(init, 500);
+
+// Start render loop
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

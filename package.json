@@ -1,0 +1,16 @@
+{
+  "name": "taoswap-ee-agario",
+  "version": "1.0.0",
+  "description": "Easter Event Agario - Bittensor edition",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "dependencies": {
+    "@polkadot/util": "^13.3.1",
+    "@polkadot/util-crypto": "^13.3.1",
+    "better-sqlite3": "^11.7.0",
+    "ws": "^8.20.0"
+  }
+}

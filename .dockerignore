@@ -1,0 +1,8 @@
+node_modules/
+*.db
+.idea/
+.DS_Store
+.git/
+deploy/
+.gitignore
+.dockerignore

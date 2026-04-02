@@ -369,6 +369,7 @@ function broadcastSpectatorState() {
 const clientHtml = readFileSync(join(__dirname, '..', 'client', 'index.html'), 'utf-8');
 const faviconSvg = readFileSync(join(__dirname, '..', 'client', 'favicon.svg'), 'utf-8');
 const ogImageSvg = readFileSync(join(__dirname, '..', 'client', 'og-image.svg'), 'utf-8');
+const ogImagePng = readFileSync(join(__dirname, '..', 'client', 'og-image.png'));
 
 const server = createServer((req, res) => {
   const headers = {
@@ -407,7 +408,12 @@ const server = createServer((req, res) => {
     return;
   }
 
-  if (req.url === '/og-image.png' || req.url === '/og-image.svg') {
+  if (req.url === '/og-image.png') {
+    res.writeHead(200, { ...headers, 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' });
+    res.end(ogImagePng);
+    return;
+  }
+  if (req.url === '/og-image.svg') {
     res.writeHead(200, { ...headers, 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400' });
     res.end(ogImageSvg);
     return;

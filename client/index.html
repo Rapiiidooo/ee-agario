@@ -93,7 +93,7 @@
     font-weight: 300;
   }
 
-  .panel input {
+  .panel input[type="text"] {
     width: 100%;
     padding: 14px 18px;
     border-radius: 12px;
@@ -106,8 +106,8 @@
     margin-bottom: 16px;
     transition: border-color 0.2s;
   }
-  .panel input:focus { border-color: var(--accent); }
-  .panel input::placeholder { color: var(--text-dim); }
+  .panel input[type="text"]:focus { border-color: var(--accent); }
+  .panel input[type="text"]::placeholder { color: var(--text-dim); }
 
   .btn {
     display: inline-flex;
@@ -532,6 +532,53 @@
     background: var(--glass-border);
   }
 
+  /* ── Settings dialog ── */
+  .vol-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .vol-row:last-of-type { border-bottom: none; }
+  .vol-icon {
+    font-size: 18px; cursor: pointer; opacity: 0.7;
+    transition: opacity 0.15s; user-select: none; flex-shrink: 0;
+    width: 24px; text-align: center; line-height: 1;
+  }
+  .vol-icon:hover { opacity: 1; }
+  .vol-icon.muted { opacity: 0.25; }
+  .vol-slider {
+    -webkit-appearance: none; appearance: none;
+    flex: 1; height: 4px; border-radius: 2px;
+    background: rgba(255,255,255,0.12); outline: none;
+    cursor: pointer;
+  }
+  .vol-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--accent); cursor: pointer;
+    box-shadow: 0 0 8px rgba(255,122,26,0.3);
+  }
+  .vol-val {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    color: var(--text-dim); width: 32px; text-align: right; flex-shrink: 0;
+    line-height: 1;
+  }
+  .skip-link {
+    font-size: 11px; color: var(--text-dim); cursor: pointer;
+    text-align: center; padding: 6px 0;
+    transition: color 0.15s;
+  }
+  .skip-link:hover { color: var(--accent); }
+  .input-wrap {
+    position: relative; width: 100%; margin-bottom: 16px;
+  }
+  .input-wrap input[type="text"] { margin-bottom: 0; padding-right: 40px; }
+  .input-icon {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    font-size: 18px; cursor: pointer; opacity: 0.4;
+    transition: opacity 0.2s;
+  }
+  .input-icon:hover { opacity: 0.8; }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -559,7 +606,10 @@
     <!-- Returning wallet player -->
     <div id="returning-panel" style="display:none">
       <div class="player-stats" id="player-stats"></div>
-      <input type="text" id="name-input" placeholder="Enter your name..." maxlength="20" autocomplete="off" spellcheck="false">
+      <div class="input-wrap">
+        <input type="text" id="name-input" placeholder="Enter your name..." maxlength="20" autocomplete="off" spellcheck="false">
+        <span class="input-icon" id="audio-hint-returning" title="Sound settings (Esc)">&#128266;</span>
+      </div>
       <div class="skin-picker" id="skin-picker-returning"></div>
       <div class="avatar-panel" id="avatar-panel-returning" style="display:none"></div>
       <button class="btn btn-play" id="play-btn">Play</button>
@@ -568,7 +618,10 @@
 
     <!-- Default panel: quick play + wallet connect -->
     <div id="new-panel">
-      <input type="text" id="guest-name-input" placeholder="Choose a name..." maxlength="20" autocomplete="off" spellcheck="false">
+      <div class="input-wrap">
+        <input type="text" id="guest-name-input" placeholder="Choose a name..." maxlength="20" autocomplete="off" spellcheck="false">
+        <span class="input-icon" id="audio-hint-new" title="Sound settings (Esc)">&#128266;</span>
+      </div>
       <div class="skin-picker" id="skin-picker-new"></div>
       <div class="avatar-panel" id="avatar-panel-new" style="display:none"></div>
       <button class="btn btn-play" id="quick-play-btn">Quick Play</button>
@@ -611,6 +664,25 @@
     <div class="msg">You got cracked!</div>
     <div class="by" id="eaten-by"></div>
     <div id="respawn-countdown" style="color:var(--text-dim);font-size:12px;margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- ── Settings Dialog (Escape) ── -->
+<div id="settings-dialog" class="screen hidden" style="z-index:250">
+  <div class="panel" style="max-width:320px">
+    <h1 style="font-size:20px;margin-bottom:16px">Settings</h1>
+    <div class="vol-row">
+      <span class="vol-icon" id="mute-music" title="Mute">&#127925;</span>
+      <input type="range" id="music-vol" min="0" max="100" class="vol-slider">
+      <span class="vol-val" id="music-vol-label"></span>
+    </div>
+    <div class="skip-link" id="next-track">&#x23ED; Next track</div>
+    <div class="vol-row">
+      <span class="vol-icon" id="mute-sfx" title="Mute">&#128264;</span>
+      <input type="range" id="sfx-vol" min="0" max="100" class="vol-slider">
+      <span class="vol-val" id="sfx-vol-label"></span>
+    </div>
+    <button class="btn btn-secondary" id="close-settings" style="margin-top:16px">Close</button>
   </div>
 </div>
 
@@ -802,6 +874,203 @@ async function fetchIdentities() {
 }
 
 
+// ═══════════════════════════════════════════════════
+// AUDIO ENGINE — Web Audio API (zero external files)
+// ═══════════════════════════════════════════════════
+
+let audioCtx = null;
+let musicVol = parseInt(localStorage.getItem('ee_music_vol') ?? '30') / 100;
+let sfxVol = parseInt(localStorage.getItem('ee_sfx_vol') ?? '80') / 100;
+let musicEnabled = musicVol > 0;
+let sfxEnabled = sfxVol > 0;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playTone(freq, duration, type = 'sine', vol = 0.15, freqEnd = null) {
+  if (sfxVol <= 0 || !audioCtx) return;
+  const v = vol * sfxVol;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, audioCtx.currentTime + duration);
+  gain.gain.setValueAtTime(v, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(); osc.stop(audioCtx.currentTime + duration);
+}
+
+function playNoise(duration, vol = 0.1) {
+  if (sfxVol <= 0 || !audioCtx) return;
+  const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * duration, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  const v = vol * sfxVol;
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * v;
+  const src = audioCtx.createBufferSource();
+  const gain = audioCtx.createGain();
+  src.buffer = buf;
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  src.connect(gain).connect(audioCtx.destination);
+  src.start();
+}
+
+// Cooldown system — prevent overlapping sounds of the same type
+const sfxCooldowns = {};
+function sfxReady(name, cooldownMs) {
+  const now = performance.now();
+  if (sfxCooldowns[name] && now - sfxCooldowns[name] < cooldownMs) return false;
+  sfxCooldowns[name] = now;
+  return true;
+}
+
+const sfx = {
+  eatFood() {
+    if (!sfxReady('eatFood', 80)) return;
+    playTone(800 + Math.random() * 400, 0.06, 'sine', 0.04);
+  },
+  eatPlayer() {
+    if (!sfxReady('eatPlayer', 300)) return;
+    playTone(300, 0.15, 'square', 0.07, 100);
+    playNoise(0.08, 0.03);
+  },
+  death() {
+    if (!sfxReady('death', 500)) return;
+    playNoise(0.2, 0.08);
+    playTone(150, 0.3, 'sine', 0.07, 60);
+  },
+  split() {
+    if (!sfxReady('split', 200)) return;
+    playTone(1200, 0.12, 'sine', 0.05, 400);
+  },
+  merge() {
+    if (!sfxReady('merge', 400)) return;
+    playTone(200, 0.15, 'triangle', 0.06, 300);
+  },
+  tick() {
+    playTone(600, 0.05, 'sine', 0.05);
+  },
+  go() {
+    setTimeout(() => playTone(800, 0.08, 'sine', 0.07), 0);
+    setTimeout(() => playTone(1000, 0.08, 'sine', 0.07), 80);
+    setTimeout(() => playTone(1200, 0.12, 'sine', 0.08), 160);
+  },
+  gameOver() {
+    if (!sfxReady('gameOver', 2000)) return;
+    playTone(500, 0.2, 'sine', 0.06, 200);
+    setTimeout(() => playTone(400, 0.2, 'sine', 0.05, 150), 200);
+    setTimeout(() => playTone(300, 0.3, 'sine', 0.04, 100), 400);
+  },
+  victory() {
+    if (!sfxReady('victory', 2000)) return;
+    playTone(523, 0.12, 'sine', 0.07);
+    setTimeout(() => playTone(659, 0.12, 'sine', 0.07), 120);
+    setTimeout(() => playTone(784, 0.12, 'sine', 0.07), 240);
+    setTimeout(() => playTone(1047, 0.25, 'sine', 0.08), 360);
+  },
+  countdownTick() {
+    playTone(400, 0.04, 'sine', 0.04);
+  },
+  newSession() {
+    if (!sfxReady('newSession', 1000)) return;
+    playTone(600, 0.1, 'sine', 0.06);
+    setTimeout(() => playTone(900, 0.15, 'sine', 0.07), 100);
+  },
+};
+
+const TRACKS = ['/music/1.mp3','/music/2.mp3','/music/3.mp3','/music/4.mp3','/music/5.mp3','/music/6.mp3','/music/7.mp3'];
+let musicAudio = null;
+let currentTrack = parseInt(localStorage.getItem('ee_track') || '0');
+
+const music = {
+  start() {
+    if (!musicEnabled || musicAudio) return;
+    musicAudio = new Audio(TRACKS[currentTrack % TRACKS.length]);
+    musicAudio.volume = musicVol;
+    musicAudio.loop = false;
+    musicAudio.addEventListener('ended', () => { musicAudio = null; this.next(); });
+    musicAudio.play().catch(() => {});
+  },
+  stop() {
+    if (!musicAudio) return;
+    musicAudio.pause();
+    musicAudio = null;
+  },
+  next() {
+    this.stop();
+    currentTrack = (currentTrack + 1) % TRACKS.length;
+    localStorage.setItem('ee_track', currentTrack);
+    this.start();
+  },
+  setVolume(v) {
+    musicVol = v;
+    musicEnabled = v > 0;
+    localStorage.setItem('ee_music_vol', Math.round(v * 100));
+    if (musicAudio) musicAudio.volume = v;
+    if (v > 0 && !musicAudio) this.start();
+    if (v <= 0) this.stop();
+  }
+};
+
+// Settings dialog
+function toggleSettings() {
+  const d = document.getElementById('settings-dialog');
+  d.classList.toggle('hidden');
+}
+document.getElementById('close-settings').addEventListener('click', toggleSettings);
+document.getElementById('audio-hint-new').addEventListener('click', () => { initAudio(); toggleSettings(); });
+document.getElementById('audio-hint-returning').addEventListener('click', () => { initAudio(); toggleSettings(); });
+
+const musicSlider = document.getElementById('music-vol');
+const sfxSlider = document.getElementById('sfx-vol');
+const musicLabel = document.getElementById('music-vol-label');
+const sfxLabel = document.getElementById('sfx-vol-label');
+const muteMusic = document.getElementById('mute-music');
+const muteSfx = document.getElementById('mute-sfx');
+let prevMusicVol = musicVol || 0.3;
+let prevSfxVol = sfxVol || 0.5;
+
+function updateMusicUI() {
+  musicSlider.value = Math.round(musicVol * 100);
+  musicLabel.textContent = Math.round(musicVol * 100) + '%';
+  muteMusic.classList.toggle('muted', musicVol <= 0);
+}
+function updateSfxUI() {
+  sfxSlider.value = Math.round(sfxVol * 100);
+  sfxLabel.textContent = Math.round(sfxVol * 100) + '%';
+  muteSfx.classList.toggle('muted', sfxVol <= 0);
+}
+updateMusicUI();
+updateSfxUI();
+
+musicSlider.addEventListener('input', (e) => {
+  const v = e.target.value / 100;
+  music.setVolume(v);
+  if (v > 0) prevMusicVol = v;
+  updateMusicUI();
+});
+sfxSlider.addEventListener('input', (e) => {
+  sfxVol = e.target.value / 100;
+  sfxEnabled = sfxVol > 0;
+  if (sfxVol > 0) prevSfxVol = sfxVol;
+  localStorage.setItem('ee_sfx_vol', e.target.value);
+  updateSfxUI();
+});
+muteMusic.addEventListener('click', () => {
+  if (musicVol > 0) { prevMusicVol = musicVol; music.setVolume(0); }
+  else { music.setVolume(prevMusicVol); }
+  updateMusicUI();
+});
+muteSfx.addEventListener('click', () => {
+  if (sfxVol > 0) { prevSfxVol = sfxVol; sfxVol = 0; sfxEnabled = false; localStorage.setItem('ee_sfx_vol', '0'); }
+  else { sfxVol = prevSfxVol; sfxEnabled = true; localStorage.setItem('ee_sfx_vol', Math.round(sfxVol * 100)); }
+  updateSfxUI();
+});
+document.getElementById('next-track').addEventListener('click', () => { music.next(); });
+
 let ws = null;
 let myId = null;
 let myName = '';
@@ -872,8 +1141,14 @@ window.addEventListener('touchstart', e => {
 
 // ── Keyboard (split) ──
 window.addEventListener('keydown', (e) => {
+  if (e.code === 'Escape') {
+    toggleSettings();
+    return;
+  }
   if (e.code === 'Space' && gameRunning && ws && ws.readyState === 1) {
     e.preventDefault();
+    initAudio();
+    sfx.split();
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2;
     let dx = mouseX - cx;
@@ -889,6 +1164,8 @@ let myOwnerId = null;
 
 // ── Connect ──
 function connect(name) {
+  initAudio();
+  music.start();
   myName = name;
   localStorage.setItem('ee_last_name', name);
   ws = new WebSocket(WS_URL);
@@ -1025,12 +1302,23 @@ function connect(name) {
     }
     if (msg.type === 'spectate') handleSpectate(msg);
     if (msg.type === 'countdown') {
+      sfx.countdownTick();
       const el = document.getElementById('countdown-display');
       if (el) el.textContent = msg.seconds > 0 ? `Next game in ${msg.seconds}s...` : '';
     }
     if (msg.type === 'newSession') {
+      sfx.newSession();
       const el = document.getElementById('countdown-display');
       if (el) el.textContent = 'New game started!';
+    }
+    if (msg.type === 'event_ended') {
+      gameRunning = false;
+      isSpectating = false;
+      document.getElementById('hud').style.display = 'none';
+      document.getElementById('gameover-screen').classList.add('hidden');
+      document.getElementById('join-screen').classList.remove('hidden');
+      const el = document.getElementById('event-timer');
+      if (el) { el.textContent = 'Event ended — thanks for playing!'; el.style.display = ''; }
     }
   };
 
@@ -1093,6 +1381,17 @@ function handleState(msg) {
 
   // Track ownerId from self
   if (msg.self.oid) myOwnerId = msg.self.oid;
+
+  // Detect merge (my piece count decreased)
+  const prevMyPieces = [...interpEntities.values()].filter(e => e.alive && e.oid === myOwnerId).length;
+  const newMyPieces = msg.entities.filter(e => e.alive && e.oid === myOwnerId).length;
+  if (newMyPieces < prevMyPieces && newMyPieces > 0) sfx.merge();
+
+  // Detect food eating (my score increased)
+  if (handleState._prevScore != null && msg.self.score > handleState._prevScore) {
+    // no sound for food pickup
+  }
+  handleState._prevScore = msg.self.score;
 
   for (const e of msg.entities) {
     seenIds.add(e.id);
@@ -1604,7 +1903,10 @@ function detectEats() {
   for (const id of prevEntityIds) {
     if (!currentIds.has(id)) {
       const ie = interpEntities.get(id);
-      if (ie) spawnEatParticles(ie.x, ie.y, ie.hue);
+      if (ie) {
+        spawnEatParticles(ie.x, ie.y, ie.hue);
+        if (ie.r > 20) sfx.eatPlayer();
+      }
     }
   }
   prevEntityIds = currentIds;
@@ -1661,6 +1963,7 @@ function drawMinimap() {
 
 // ── Eaten overlay ──
 function showEaten(byName) {
+  sfx.death();
   document.getElementById('eaten-by').textContent = `Eaten by ${byName}`;
   const overlay = document.getElementById('eaten-overlay');
   const cd = document.getElementById('respawn-countdown');
@@ -1669,14 +1972,15 @@ function showEaten(byName) {
   cd.textContent = `Respawning in ${sec}...`;
   const iv = setInterval(() => {
     sec--;
-    if (sec > 0) { cd.textContent = `Respawning in ${sec}...`; }
-    else { cd.textContent = 'Go!'; clearInterval(iv); }
+    if (sec > 0) { sfx.tick(); cd.textContent = `Respawning in ${sec}...`; }
+    else { sfx.go(); cd.textContent = 'Go!'; clearInterval(iv); }
   }, 1000);
   setTimeout(() => overlay.classList.remove('show'), 4200);
 }
 
 // ── Game Over ──
 function spawnConfetti() {
+  sfx.victory();
   const container = document.getElementById('gameover-screen');
   const colors = ['#ff3b1a', '#ff7a1a', '#ffbf1a', '#00dbbc', '#8b5cf6', '#fbb4c4', '#b4d4fb'];
   for (let i = 0; i < 60; i++) {
@@ -1729,6 +2033,7 @@ function renderWaitingEggs(container) {
 }
 
 function showGameOver(leaderboard) {
+  sfx.gameOver();
   // Don't set gameRunning=false — server auto-rejoins us to the next session
   document.getElementById('hud').style.display = 'none';
 
@@ -1778,7 +2083,7 @@ function showGameOver(leaderboard) {
     const score = me ? me.score : 0;
     const kills = me ? me.kills : 0;
     const medal = rank === 1 ? '\ud83e\udd47' : rank === 2 ? '\ud83e\udd48' : rank === 3 ? '\ud83e\udd49' : '\ud83c\udf73';
-    const text = `${medal} #${rank} on Tao Easter Event!\n\n\ud83c\udf1f ${score} pts \u00b7 ${kills} eats\n\n\ud83e\udd5a Eat or be eaten \u2014 The #Bittensor egg game by @taoswap_org\n`;
+    const text = `${medal} #${rank} on Tao Easter Event!\n\n\ud83c\udf1f ${score} pts \u00b7 ${kills} eats\n\n\ud83e\udd5a Eat or be eaten\n\nThe #Bittensor egg game by @taoswap_org\n`;
     const url = 'https://ee.taoswap.org';
     window.open(
       `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
@@ -1991,14 +2296,17 @@ document.getElementById('disconnect-btn').addEventListener('click', () => {
 });
 
 // Online count polling
+let eventDeadline = null;
+
 async function updateOnlineCount() {
   try {
     const res = await fetch('/api/online');
-    const { online, playing } = await res.json();
+    const data = await res.json();
+    if (data.deadline) eventDeadline = data.deadline;
     const el = document.getElementById('online-count');
     if (el) {
-      if (online > 0) {
-        el.innerHTML = `\u25cf ${online} online`;
+      if (data.online > 0) {
+        el.innerHTML = `\u25cf ${data.online} online`;
         el.style.display = '';
       } else {
         el.style.display = 'none';
@@ -2006,8 +2314,23 @@ async function updateOnlineCount() {
     }
   } catch (_) {}
 }
+
+function updateEventTimer() {
+  if (!eventDeadline) return;
+  const el = document.getElementById('event-timer');
+  if (!el) return;
+  const diff = eventDeadline - Date.now();
+  if (diff <= 0) { el.textContent = 'Event ended'; return; }
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  el.textContent = (d > 0 ? d + 'd ' : '') + h + 'h ' + m + 'm ' + s + 's remaining';
+  el.style.display = '';
+}
 updateOnlineCount();
 setInterval(updateOnlineCount, 5000);
+setInterval(updateEventTimer, 1000);
 
 // Init — wait for extensions to inject (they load async)
 setTimeout(init, 500);

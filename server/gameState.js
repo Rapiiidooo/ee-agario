@@ -230,8 +230,8 @@ export function tick(state, dt) {
   for (const e of state.entities.values()) {
     if (!e.alive) continue;
 
-    // Speed decreases as you grow (inverse sqrt of mass ratio)
-    const speedMult = Math.max(0.3, MIN_RADIUS / Math.sqrt(e.radius));
+    // Speed decreases as you grow (gentler curve with pow 0.4)
+    const speedMult = Math.max(0.4, MIN_RADIUS / Math.pow(e.radius, 0.4));
     const speed = BASE_SPEED * speedMult;
 
     // Apply split boost

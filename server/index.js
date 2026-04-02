@@ -21,6 +21,7 @@ import { u8aWrapBytes } from '@polkadot/util';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '9420');
 const MAX_REAL_PLAYERS = 30;
+const EVENT_DEADLINE = new Date('2026-04-13T00:00:00Z').getTime(); // Sunday April 12 midnight UTC
 
 // ── SQLite setup ──
 
@@ -51,6 +52,16 @@ db.exec(`
     games_played INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
     last_seen TEXT DEFAULT (datetime('now'))
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS identity_images (
+    hash TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    data BLOB NOT NULL,
+    fetched_at TEXT DEFAULT (datetime('now'))
   );
 `);
 
@@ -99,23 +110,51 @@ function verifyWalletSignature(address, signature, message) {
   }
 }
 
-// ── Fetch Bittensor identities ──
+// ── Fetch Bittensor identities (with DB cache) ──
 
 let identities = [];
+const imageCache = new Map(); // proxyId -> { buffer, contentType }
 
-// Image cache: hash -> { buffer, contentType }
-const imageCache = new Map();
+const upsertImage = db.prepare('INSERT OR REPLACE INTO identity_images (hash, name, content_type, data) VALUES (?, ?, ?, ?)');
+const getAllImages = db.prepare('SELECT hash, name, content_type, data FROM identity_images');
 
-async function fetchIdentities() {
+function loadIdentitiesFromDb() {
+  const rows = getAllImages.all();
+  if (rows.length === 0) return false;
+  identities = [];
+  imageCache.clear();
+  for (let i = 0; i < rows.length; i++) {
+    imageCache.set(i, { buffer: rows[i].data, contentType: rows[i].content_type });
+    identities.push({ name: rows[i].name, image: `/api/img/${i}` });
+  }
+  console.log(`Loaded ${identities.length} identities from DB cache`);
+  return true;
+}
+
+async function fetchIdentities(forceRefresh = false) {
+  // Try DB cache first for instant startup
+  const hadCache = loadIdentitiesFromDb();
+
+  // Skip refresh if cache is recent (< 1 hour) unless forced
+  if (hadCache && !forceRefresh) {
+    const newest = db.prepare('SELECT MAX(fetched_at) as t FROM identity_images').get();
+    if (newest?.t) {
+      const age = Date.now() - new Date(newest.t + 'Z').getTime();
+      if (age < 3600000) {
+        console.log(`Identity cache fresh (${Math.round(age / 60000)}min old), skipping refresh`);
+        return;
+      }
+    }
+  }
+
+  // Refresh from API
   try {
-    // Fetch validator identities
     const res = await fetch('https://api.taoswap.org/identities/');
     const data = await res.json();
     const entries = Object.values(data.results || data)
       .filter(e => e.name && e.name !== '-' && e.name !== 'N/A' && e.image && e.image !== '-' && e.image !== '' && !e.image.includes('N/A') && e.image.startsWith('http'))
       .map(e => ({ name: e.name, image: e.image }));
 
-    // Fetch subnet identities
     let subnetEntries = [];
     try {
       const subRes = await fetch('https://api.taoswap.org/subnets/');
@@ -125,7 +164,6 @@ async function fetchIdentities() {
         .map(s => ({ name: s.identity.name || s.name || `SN${s.id}`, image: s.identity.image }));
     } catch (_) {}
 
-    // Merge and dedupe by URL
     const all = [...entries, ...subnetEntries];
     const seenUrls = new Set();
     const candidates = all.filter(e => {
@@ -134,13 +172,17 @@ async function fetchIdentities() {
       return true;
     });
 
-    // Fetch images in batches, dedupe by SHA-256, cache for proxying
+    // Pre-load known hashes from DB to skip re-downloading
     const seenHashes = new Map();
+    const dbRows = getAllImages.all();
+    for (const row of dbRows) seenHashes.set(row.hash, true);
+
     const unique = [];
-    let proxyIdx = 0;
+    let proxyIdx = imageCache.size; // continue after cached entries
+    let skipped = 0;
     const BATCH = 10;
     const startTime = Date.now();
-    console.log(`Fetching ${candidates.length} identity images (batch size ${BATCH})...`);
+    console.log(`Fetching ${candidates.length} identity images (${seenHashes.size} already cached)...`);
     for (let i = 0; i < candidates.length; i += BATCH) {
       const batch = candidates.slice(i, i + BATCH);
       await Promise.allSettled(batch.map(async (id) => {
@@ -151,22 +193,27 @@ async function fetchIdentities() {
           const buf = Buffer.from(await imgRes.arrayBuffer());
           const hash = await crypto.subtle.digest('SHA-256', buf);
           const hex = [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
-          if (!seenHashes.has(hex)) {
-            seenHashes.set(hex, id);
-            const pid = proxyIdx++;
-            imageCache.set(pid, { buffer: buf, contentType });
-            id.image = `/api/img/${pid}`;
-            unique.push(id);
-          }
+          if (seenHashes.has(hex)) { skipped++; return; }
+          seenHashes.set(hex, true);
+          const pid = proxyIdx++;
+          imageCache.set(pid, { buffer: buf, contentType });
+          id.image = `/api/img/${pid}`;
+          unique.push(id);
+          try { upsertImage.run(hex, id.name, contentType, buf); } catch (_) {}
         } catch (_) {}
       }));
       console.log(`  batch ${Math.floor(i / BATCH) + 1}/${Math.ceil(candidates.length / BATCH)} done (${unique.length} unique so far)`);
     }
 
     identities = unique;
-    console.log(`Identity fetch complete in ${((Date.now() - startTime) / 1000).toFixed(1)}s — ${identities.length} unique (${candidates.length} candidates)`);
+    if (unique.length > 0) {
+      // Reload from DB to get consistent proxy IDs
+      loadIdentitiesFromDb();
+    }
+    console.log(`Identity refresh done in ${((Date.now() - startTime) / 1000).toFixed(1)}s — ${unique.length} new, ${skipped} skipped, ${identities.length} total`);
   } catch (err) {
     console.error('Failed to fetch identities:', err.message);
+    if (!hadCache) console.error('No cached identities available');
   }
 }
 
@@ -176,6 +223,11 @@ let state = null;
 let lastTick = Date.now();
 
 function startNewSession() {
+  if (Date.now() >= EVENT_DEADLINE) {
+    console.log('Event ended — no new sessions');
+    broadcastToAll({ type: 'event_ended' });
+    return;
+  }
   state = createGameState(identities);
   lastTick = Date.now();
 
@@ -400,6 +452,16 @@ const server = createServer((req, res) => {
     return;
   }
 
+  if (req.url?.startsWith('/music/')) {
+    const file = join(__dirname, '..', 'client', req.url.slice('/music/'.length));
+    try {
+      const data = readFileSync(file);
+      res.writeHead(200, { ...headers, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=86400' });
+      res.end(data);
+    } catch (_) { res.writeHead(404); res.end(); }
+    return;
+  }
+
   if (req.url?.startsWith('/api/img/')) {
     const id = parseInt(req.url.slice('/api/img/'.length));
     const cached = imageCache.get(id);
@@ -429,7 +491,7 @@ const server = createServer((req, res) => {
     const online = wss.clients.size;
     const playing = players.size;
     res.writeHead(200, { ...headers, 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ online, playing }));
+    res.end(JSON.stringify({ online, playing, deadline: EVENT_DEADLINE }));
     return;
   }
 
@@ -508,7 +570,24 @@ th:nth-child(3),th:nth-child(4),th:nth-child(5){text-align:right}
       <tbody>${rows}</tbody>
     </table>
   </div>
-  <div class="footer">Tao Easter Event \u2014 ee.taoswap.org</div>
+  <div class="footer">
+    <div id="event-timer" style="color:#ff7a1a;font-size:13px;margin-bottom:6px"></div>
+    Tao Easter Event \u2014 ee.taoswap.org
+  </div>
+  <script>
+  const deadline = ${EVENT_DEADLINE};
+  function updateTimer() {
+    const diff = deadline - Date.now();
+    const el = document.getElementById('event-timer');
+    if (diff <= 0) { el.textContent = 'Event ended'; return; }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.textContent = (d > 0 ? d + 'd ' : '') + h + 'h ' + m + 'm ' + s + 's remaining';
+  }
+  updateTimer(); setInterval(updateTimer, 1000);
+  <\/script>
 </div></body></html>`);
     return;
   }

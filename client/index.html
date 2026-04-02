@@ -1496,10 +1496,10 @@ function render(now) {
   const W = window.innerWidth;
   const H = window.innerHeight;
 
+  if (!gameRunning || !serverState) return;
+
   ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
   ctx.clearRect(0, 0, W, H);
-
-  if (!gameRunning || !serverState) return;
 
   // ── Interpolate ──
   const lerpSpeed = 12;

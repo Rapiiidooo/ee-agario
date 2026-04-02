@@ -1,7 +1,7 @@
 // gameState.js — Authoritative game state & tick logic
 
 const MAP_SIZE = 5678;
-const MAX_ENTITIES = 1;
+const MAX_ENTITIES = 20;
 const TICK_RATE = 30;
 const SESSION_DURATION = 5 * 60 * 1000; // 5 minutes
 const BASE_SPEED = 200; // px/sec at min size

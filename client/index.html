@@ -279,13 +279,13 @@
   #eaten-overlay {
     position: fixed; inset: 0;
     display: flex; align-items: center; justify-content: center;
-    background: rgba(15,14,23,0.8);
+    background: rgba(15,14,23,0.85);
     z-index: 80;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s;
   }
-  #eaten-overlay.show { opacity: 1; }
+  #eaten-overlay.show { opacity: 1; pointer-events: auto; }
   #eaten-overlay .msg {
     font-size: 24px;
     font-weight: 600;
@@ -661,10 +661,13 @@
 
 <!-- ── Eaten Overlay ── -->
 <div id="eaten-overlay">
-  <div style="text-align:center">
+  <div class="panel" style="max-width:420px">
     <div class="msg">You got cracked!</div>
     <div class="by" id="eaten-by"></div>
-    <div id="respawn-countdown" style="color:var(--text-dim);font-size:12px;margin-top:12px"></div>
+    <div class="your-result" id="eaten-result"></div>
+    <div class="final-leaderboard" id="eaten-leaderboard" style="max-height:200px"></div>
+    <button class="btn btn-twitter" id="eaten-tweet-btn">Share on <svg width="16" height="16" viewBox="0 0 24 24" fill="white" style="vertical-align:middle"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></button>
+    <button class="btn btn-play" id="eaten-play-btn" style="margin-top:12px">Play Again</button>
   </div>
 </div>
 
@@ -1272,7 +1275,7 @@ function connect(name) {
     }
 
     if (msg.type === 'state') handleState(msg);
-    if (msg.type === 'eaten') showEaten(msg.by?.name || 'someone');
+    if (msg.type === 'eaten') showEaten(msg);
     if (msg.type === 'gameOver') {
       isSpectating = true;
       gameRunning = true; // keep render loop going
@@ -1985,21 +1988,52 @@ function drawMinimap() {
 }
 
 // ── Eaten overlay ──
-function showEaten(byName) {
+async function showEaten(msg) {
   sfx.death();
+  const byName = msg.by?.name || 'someone';
   track('eaten', { by: byName });
   document.getElementById('eaten-by').textContent = `Eaten by ${byName}`;
+
+  // Show player stats
+  const resultEl = document.getElementById('eaten-result');
+  const score = msg.score || 0;
+  const kills = msg.kills || 0;
+  resultEl.innerHTML = `
+    <div style="font-size:20px;font-weight:700;color:var(--text);margin:8px 0">${score} pts</div>
+    <div class="label">${kills} eats</div>
+  `;
+
+  // Refresh & show global leaderboard
+  try {
+    const res = await fetch('/api/leaderboard');
+    allLeaderboardData = await res.json() || [];
+  } catch (_) {}
+  const lbEl = document.getElementById('eaten-leaderboard');
+  const list = allLeaderboardData.slice(0, 10);
+  lbEl.innerHTML = list.map((p, i) => `<div class="global-lb-row">
+    <span class="glb-rank">${i + 1}</span>
+    <span class="glb-name">${esc(p.name)}</span>
+    <span class="glb-xp">${p.xp} xp</span>
+  </div>`).join('');
+
   const overlay = document.getElementById('eaten-overlay');
-  const cd = document.getElementById('respawn-countdown');
   overlay.classList.add('show');
-  let sec = 3;
-  cd.textContent = `Respawning in ${sec}...`;
-  const iv = setInterval(() => {
-    sec--;
-    if (sec > 0) { sfx.tick(); cd.textContent = `Respawning in ${sec}...`; }
-    else { sfx.go(); cd.textContent = 'Go!'; clearInterval(iv); }
-  }, 1000);
-  setTimeout(() => overlay.classList.remove('show'), 3200);
+
+  // Share on X
+  document.getElementById('eaten-tweet-btn').onclick = () => {
+    track('share_x', { score, kills });
+    const medal = '\ud83c\udf73';
+    const text = `${medal} ${score} pts \u00b7 ${kills} \ud83e\udd5a eats on Tao Easter Event!\n\nCan you crack my score?\nThe #Bittensor egg game by @taoswap_org\n\nhttps://ee.taoswap.org`;
+    window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  // Play Again — ask server to respawn
+  document.getElementById('eaten-play-btn').onclick = () => {
+    overlay.classList.remove('show');
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: 'respawn' }));
+    }
+  };
 }
 
 // ── Game Over ──

@@ -10,7 +10,7 @@ import { randomBytes } from 'crypto';
 import { WebSocketServer } from 'ws';
 import Database from 'better-sqlite3';
 import {
-  createGameState, createEntity, removeEntity, splitEntity,
+  createGameState, createEntity, removeEntity, splitEntity, respawnEntity,
   tick, getStateForPlayer, getEndState,
   MAP_SIZE, MAX_ENTITIES, TICK_RATE, SESSION_DURATION,
 } from './gameState.js';
@@ -290,6 +290,13 @@ function joinPlayer(ws) {
 }
 
 function broadcastState() {
+  // Count total connected players (not just alive entities)
+  let connectedPlayers = 0;
+  for (const ws of wss.clients) {
+    if (ws.readyState === 1 && ws._joined) connectedPlayers++;
+  }
+  state._realCount = connectedPlayers;
+
   for (const [ws, info] of players) {
     if (ws.readyState !== 1) continue;
 
@@ -340,10 +347,10 @@ function broadcastSpectatorState() {
   if (!hasSpectators) return;
 
   const aliveEntities = [...state.entities.values()].filter(e => e.alive);
-  let realCount = 0, botCount = 0;
+  let botCount = 0;
   const entities = [];
   for (const e of aliveEntities) {
-    if (e.isBot) botCount++; else realCount++;
+    if (e.isBot) botCount++;
     entities.push({
       id: e.id, oid: e.ownerId, x: Math.round(e.x), y: Math.round(e.y),
       r: Math.round(e.radius), name: e.name, hue: e.hue, alive: true,
@@ -356,7 +363,7 @@ function broadcastSpectatorState() {
   const data = JSON.stringify({
     type: 'spectate', entities, food,
     time: Math.max(0, Math.ceil((state.sessionEnd - Date.now()) / 1000)),
-    mapSize: MAP_SIZE, players: realCount, bots: botCount,
+    mapSize: MAP_SIZE, players: state._realCount || 0, bots: botCount,
   });
   for (const ws of wss.clients) {
     if (ws.readyState !== 1 || ws._joined) continue;
@@ -744,6 +751,14 @@ wss.on('connection', (ws) => {
             const len = Math.sqrt(dx * dx + dy * dy) || 1;
             splitEntity(state, piece.id, dx / len, dy / len);
           }
+        }
+      }
+
+      if (msg.type === 'respawn' && ws._joined) {
+        const info = players.get(ws);
+        const entity = state?.entities.get(info?.playerId);
+        if (entity && !entity.alive) {
+          respawnEntity(state, entity);
         }
       }
     } catch (_) {}

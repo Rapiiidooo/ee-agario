@@ -4,7 +4,7 @@ const MAP_SIZE = 5678;
 const MAX_ENTITIES = 20;
 const TICK_RATE = 20;
 const SESSION_DURATION = 3.5 * 60 * 1000; // 3:30 minutes
-const BASE_SPEED = 200; // px/sec at min size
+const BASE_SPEED = 150; // px/sec at min size
 const MIN_RADIUS = 20;  // absolute minimum (speed calc, decay threshold)
 const SPAWN_RADIUS = 28; // starting size for new/respawned eggs
 const MAX_RADIUS = 1000;
@@ -419,7 +419,7 @@ function eatEntity(state, eater, eaten) {
     return;
   }
 
-  // All pieces dead — notify and respawn after delay
+  // All pieces dead — notify
   if (!eaten.isBot) {
     const eatenWs = eaten.ws || [...state.entities.values()]
       .find(e => e.ownerId === eaten.ownerId && e.ws)?.ws;
@@ -428,19 +428,15 @@ function eatEntity(state, eater, eaten) {
         eatenWs.send(JSON.stringify({
           type: 'eaten',
           by: { name: eater.name, id: eater.id },
+          score: eaten.score,
+          kills: eaten.kills,
         }));
       } catch (_) {}
     }
+  } else {
+    // Bots auto-respawn after delay
+    setTimeout(() => removeEntity(state, eaten.id), 3000);
   }
-
-  // Respawn after delay — keep entity hidden until respawn
-  setTimeout(() => {
-    if (eaten.isBot) {
-      removeEntity(state, eaten.id);
-    } else {
-      respawnEntity(state, eaten);
-    }
-  }, 3000);
 }
 
 function respawnEntity(state, entity) {
@@ -605,4 +601,4 @@ export function getEndState(state) {
   };
 }
 
-export { MAP_SIZE, MAX_ENTITIES, TICK_RATE, SESSION_DURATION, getFoodInRange };
+export { MAP_SIZE, MAX_ENTITIES, TICK_RATE, SESSION_DURATION, getFoodInRange, respawnEntity };

@@ -552,15 +552,20 @@ export function getStateForPlayer(state, playerId) {
     }
   }
 
-  const nearbyFood = [];
-  for (const f of state.food.values()) {
-    if (f.x > left && f.x < right && f.y > top && f.y < bottom) {
-      nearbyFood.push({
-        id: f.id,
-        x: Math.round(f.x),
-        y: Math.round(f.y),
-        hue: f.hue,
-      });
+  // Only send food every 5th tick (food is static, only changes when eaten/spawned)
+  let nearbyFood = undefined;
+  if (!state._foodTick) state._foodTick = 0;
+  if (++state._foodTick % 5 === 0) {
+    nearbyFood = [];
+    for (const f of state.food.values()) {
+      if (f.x > left && f.x < right && f.y > top && f.y < bottom) {
+        nearbyFood.push({
+          id: f.id,
+          x: Math.round(f.x),
+          y: Math.round(f.y),
+          hue: f.hue,
+        });
+      }
     }
   }
 

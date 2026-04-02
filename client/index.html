@@ -14,6 +14,7 @@
 <meta name="twitter:description" content="Eat or be eaten. Multiplayer egg game on Bittensor.">
 <meta name="twitter:image" content="https://ee.taoswap.org/og-image.png">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script defer src="https://analytics.taoswap.org/script.js" data-website-id="4d887531-7912-4639-8b83-1b3bbcb9d7a0"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Lexend:wght@300;400;600;700&display=swap');
 
@@ -884,6 +885,11 @@ let sfxVol = parseInt(localStorage.getItem('ee_sfx_vol') ?? '80') / 100;
 let musicEnabled = musicVol > 0;
 let sfxEnabled = sfxVol > 0;
 
+// ── Analytics ──
+function track(event, data) {
+  if (typeof umami !== 'undefined') umami.track(event, data);
+}
+
 function initAudio() {
   if (audioCtx) return;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1166,6 +1172,7 @@ let myOwnerId = null;
 function connect(name) {
   initAudio();
   music.start();
+  track('game_start', { mode: isGuest ? 'guest' : 'wallet' });
   myName = name;
   localStorage.setItem('ee_last_name', name);
   ws = new WebSocket(WS_URL);
@@ -1964,6 +1971,7 @@ function drawMinimap() {
 // ── Eaten overlay ──
 function showEaten(byName) {
   sfx.death();
+  track('eaten', { by: byName });
   document.getElementById('eaten-by').textContent = `Eaten by ${byName}`;
   const overlay = document.getElementById('eaten-overlay');
   const cd = document.getElementById('respawn-countdown');
@@ -2047,6 +2055,7 @@ function showGameOver(leaderboard) {
 
   // Find player
   const me = leaderboard.find(e => e.name === myName);
+  if (me) track('game_over', { rank: me.rank, score: me.score, kills: me.kills });
   const resultEl = document.getElementById('your-result');
   if (me) {
     const trophy = me.rank === 1 ? '\ud83e\udd47' : me.rank === 2 ? '\ud83e\udd48' : me.rank === 3 ? '\ud83e\udd49' : '';
@@ -2079,6 +2088,7 @@ function showGameOver(leaderboard) {
 
   // Twitter share
   document.getElementById('tweet-btn').onclick = () => {
+    track('share_x', { rank: me?.rank, score: me?.score });
     const rank = me ? me.rank : '?';
     const score = me ? me.score : 0;
     const kills = me ? me.kills : 0;
@@ -2222,6 +2232,7 @@ async function onWalletClick(key) {
   const btn = document.querySelector(`.wallet-btn[data-wallet="${key}"]`);
   try {
     btn.textContent = 'Connecting...';
+    track('wallet_connect', { wallet: key });
     const accounts = await connectWallet(key);
 
     // Populate account selector

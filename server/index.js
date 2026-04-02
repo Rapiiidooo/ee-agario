@@ -453,7 +453,9 @@ const server = createServer((req, res) => {
   }
 
   if (req.url?.startsWith('/music/')) {
-    const file = join(__dirname, '..', 'client', req.url.slice('/music/'.length));
+    const name = req.url.slice('/music/'.length).replace(/[^0-9a-zA-Z._-]/g, '');
+    if (!name || name.includes('..')) { res.writeHead(400); res.end(); return; }
+    const file = join(__dirname, '..', 'client', name);
     try {
       const data = readFileSync(file);
       res.writeHead(200, { ...headers, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=86400' });
@@ -817,6 +819,19 @@ wss.on('connection', (ws) => {
     if (info) {
       const entity = state?.entities.get(info.playerId);
       const ownerId = entity?.ownerId || info.playerId;
+
+      // Save score on disconnect (aggregate all pieces)
+      const playerKey = info.address || (ws._name ? `guest:${ws._name}` : null);
+      if (playerKey && state) {
+        let totalScore = 0;
+        for (const e of state.entities.values()) {
+          if (e.ownerId === ownerId) totalScore += e.score;
+        }
+        if (totalScore > 0) {
+          try { upsertPlayer.run(playerKey, ws._name || 'Player', totalScore, totalScore); } catch (_) {}
+        }
+      }
+
       for (const e of [...state.entities.values()]) {
         if (e.ownerId === ownerId) removeEntity(state, e.id);
       }

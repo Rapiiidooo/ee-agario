@@ -3,10 +3,10 @@
 const MAP_SIZE = 5678;
 const MAX_ENTITIES = 1;
 const TICK_RATE = 30;
-const SESSION_DURATION = 3 * 60 * 1000; // 3 minutes
+const SESSION_DURATION = 5 * 60 * 1000; // 5 minutes
 const BASE_SPEED = 200; // px/sec at min size
 const MIN_RADIUS = 20;  // absolute minimum (speed calc, decay threshold)
-const SPAWN_RADIUS = 300; // starting size for new/respawned eggs
+const SPAWN_RADIUS = 28; // starting size for new/respawned eggs
 const MAX_RADIUS = 1000;
 const FOOD_COUNT = 800;
 const FOOD_RADIUS = 6;

@@ -1455,7 +1455,11 @@ function updateHUD(msg) {
     `${msg.players || 0} players \u00b7 ${msg.bots || 0} bots \u00b7 ${total} total`;
 
   const lbEl = document.getElementById('lb-list');
-  lbEl.innerHTML = msg.top5.map(e => {
+  // Only rebuild HTML when players change (not just scores)
+  const lbPlayersKey = msg.top5.map(e => e.name).join('|');
+  if (lbEl._lastPlayers !== lbPlayersKey) {
+    lbEl._lastPlayers = lbPlayersKey;
+    lbEl.innerHTML = msg.top5.map(e => {
     const validImg = e.img && !e.img.includes('N/A') && !failedImages.has(e.img);
     const icon = validImg ? `<img src="${esc(e.img)}" style="width:18px;height:18px;border-radius:50%;object-fit:cover" onerror="failedImages.add('${esc(e.img)}');this.outerHTML=miniEggSvg(${e.hue != null ? e.hue : 0},18)">` : miniEggSvg(e.hue != null ? e.hue : 0, 18);
     return `<div class="lb-row${e.name === myName ? ' me' : ''}">
@@ -1465,6 +1469,15 @@ function updateHUD(msg) {
       <span class="pts">${e.kills || 0}e ${e.score}</span>
     </div>`;
   }).join('');
+  }
+  // Update scores in-place without rebuilding HTML
+  const rows = lbEl.querySelectorAll('.lb-row');
+  msg.top5.forEach((e, i) => {
+    if (rows[i]) {
+      const pts = rows[i].querySelector('.pts');
+      if (pts) pts.textContent = `${e.kills || 0}e ${e.score}`;
+    }
+  });
 }
 
 // ── Input loop (send at tick rate) ──
@@ -2093,10 +2106,9 @@ function showGameOver(leaderboard) {
     const score = me ? me.score : 0;
     const kills = me ? me.kills : 0;
     const medal = rank === 1 ? '\ud83e\udd47' : rank === 2 ? '\ud83e\udd48' : rank === 3 ? '\ud83e\udd49' : '\ud83c\udf73';
-    const text = `${medal} #${rank} on Tao Easter Event!\n\n\ud83c\udf1f ${score} pts \u00b7 ${kills} eats\n\n\ud83e\udd5a Eat or be eaten\n\nThe #Bittensor egg game by @taoswap_org\n`;
-    const url = 'https://ee.taoswap.org';
+    const text = `${medal} #${rank} on Tao Easter Event!\n\n\ud83c\udf1f ${score} pts \u00b7 ${kills} eats\n\nCan you crack my score? \ud83e\udd5a\nThe #Bittensor egg game by @taoswap_org\n\nhttps://ee.taoswap.org`;
     window.open(
-      `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+      `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`,
       '_blank'
     );
   };

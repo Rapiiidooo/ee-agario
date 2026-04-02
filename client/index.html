@@ -1532,7 +1532,8 @@ function render(now) {
       comY /= totalMass;
 
       const spread = myPieces.length > 1 ? Math.max(...myPieces.map(p => Math.sqrt((p.x - comX) ** 2 + (p.y - comY) ** 2))) : 0;
-      const targetScale = Math.max(0.5, Math.min(0.85, 60 / (maxR + spread * 0.3)));
+      const screenFactor = Math.min(W, H) / 1080; // scale relative to 1080p
+      const targetScale = Math.max(0.5 * screenFactor, Math.min(0.85 * screenFactor, 60 * screenFactor / (maxR + spread * 0.3)));
       camScale += (targetScale - camScale) * 3 * dt;
       camX += (comX - camX) * 6 * dt;
       camY += (comY - camY) * 6 * dt;

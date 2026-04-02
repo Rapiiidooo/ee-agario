@@ -1,6 +1,6 @@
 // index.js — HTTP + WebSocket server + game loop
 
-const VERSION = '1.0.0';
+const VERSION = '1.0.1';
 
 import { createServer } from 'http';
 import { readFileSync, existsSync } from 'fs';
@@ -728,12 +728,15 @@ wss.on('connection', (ws) => {
         const info = players.get(ws);
         const entity = state?.entities.get(info?.playerId);
         if (entity && entity.alive) {
-          const dx = Number(msg.dx) || 0;
-          const dy = Number(msg.dy) || 0;
+          const tx = Number(msg.tx) || 0;
+          const ty = Number(msg.ty) || 0;
           const pieces = [...state.entities.values()]
             .filter(e => e.alive && e.ownerId === entity.ownerId);
           for (const piece of pieces) {
-            splitEntity(state, piece.id, dx, dy);
+            const dx = tx - piece.x;
+            const dy = ty - piece.y;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            splitEntity(state, piece.id, dx / len, dy / len);
           }
         }
       }
@@ -781,7 +784,7 @@ async function main() {
   setInterval(gameLoop, 1000 / TICK_RATE);
 
   server.listen(PORT, '0.0.0.0', () => {
-    console.log(`[EE Taoswap v${VERSION}]`);
+    console.log(`[EE Taoswap v${VERSION}] http://0.0.0.0:${PORT}`);
   });
 }
 

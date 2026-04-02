@@ -1,14 +1,14 @@
 // gameState.js — Authoritative game state & tick logic
 
-const MAP_SIZE = 5678;
-const MAX_ENTITIES = 20;
+const MAP_SIZE = 6789;
+const MAX_ENTITIES = 25;
 const TICK_RATE = 30;
-const SESSION_DURATION = 5 * 60 * 1000; // 5 minutes
+const SESSION_DURATION = 4 * 60 * 1000; // 4 minutes
 const BASE_SPEED = 200; // px/sec at min size
 const MIN_RADIUS = 20;  // absolute minimum (speed calc, decay threshold)
 const SPAWN_RADIUS = 28; // starting size for new/respawned eggs
 const MAX_RADIUS = 1000;
-const FOOD_COUNT = 800;
+const FOOD_COUNT = 1000;
 const FOOD_RADIUS = 6;
 const EGG_RATIO = 1.25; // ry = radius * EGG_RATIO (egg is taller than wide)
 const HITBOX_SHRINK = 0.85; // hitbox is 85% of visual egg size
@@ -32,8 +32,8 @@ const VIEWPORT_H = 1080;
 
 // Split constants
 const SPLIT_MIN_MASS = MIN_RADIUS * MIN_RADIUS * 4; // need 2x min size to split
-const SPLIT_BOOST = 1200; // initial burst speed px/sec
-const SPLIT_BOOST_DECAY = 0.95; // per tick multiplier (higher = slides further)
+const SPLIT_BOOST = 1800; // initial burst speed px/sec
+const SPLIT_BOOST_DECAY = 0.96; // per tick multiplier (higher = slides further)
 const SPLIT_MERGE_DELAY = 8000; // ms before pieces can merge
 const SPLIT_MAX_PIECES = 16; // max pieces per player
 
@@ -440,7 +440,7 @@ function eatEntity(state, eater, eaten) {
     } else {
       respawnEntity(state, eaten);
     }
-  }, 4000);
+  }, 3000);
 }
 
 function respawnEntity(state, entity) {

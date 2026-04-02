@@ -1155,12 +1155,11 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     initAudio();
     sfx.split();
-    const cx = window.innerWidth / 2;
-    const cy = window.innerHeight / 2;
-    let dx = mouseX - cx;
-    let dy = mouseY - cy;
-    const len = Math.sqrt(dx * dx + dy * dy) || 1;
-    ws.send(JSON.stringify({ type: 'split', dx: dx / len, dy: dy / len }));
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const tx = camX + (mouseX - W / 2) / camScale;
+    const ty = camY + (mouseY - H / 2) / camScale;
+    ws.send(JSON.stringify({ type: 'split', tx: Math.round(tx), ty: Math.round(ty) }));
   }
 });
 
@@ -1533,7 +1532,7 @@ function render(now) {
       comY /= totalMass;
 
       const spread = myPieces.length > 1 ? Math.max(...myPieces.map(p => Math.sqrt((p.x - comX) ** 2 + (p.y - comY) ** 2))) : 0;
-      const targetScale = Math.max(0.25, Math.min(0.75, 35 / (maxR + spread * 0.3)));
+      const targetScale = Math.max(0.5, Math.min(0.85, 60 / (maxR + spread * 0.3)));
       camScale += (targetScale - camScale) * 3 * dt;
       camX += (comX - camX) * 6 * dt;
       camY += (comY - camY) * 6 * dt;
@@ -1976,14 +1975,14 @@ function showEaten(byName) {
   const overlay = document.getElementById('eaten-overlay');
   const cd = document.getElementById('respawn-countdown');
   overlay.classList.add('show');
-  let sec = 4;
+  let sec = 3;
   cd.textContent = `Respawning in ${sec}...`;
   const iv = setInterval(() => {
     sec--;
     if (sec > 0) { sfx.tick(); cd.textContent = `Respawning in ${sec}...`; }
     else { sfx.go(); cd.textContent = 'Go!'; clearInterval(iv); }
   }, 1000);
-  setTimeout(() => overlay.classList.remove('show'), 4200);
+  setTimeout(() => overlay.classList.remove('show'), 3200);
 }
 
 // ── Game Over ──

@@ -2106,7 +2106,7 @@ function showGameOver(leaderboard) {
     const score = me ? me.score : 0;
     const kills = me ? me.kills : 0;
     const medal = rank === 1 ? '\ud83e\udd47' : rank === 2 ? '\ud83e\udd48' : rank === 3 ? '\ud83e\udd49' : '\ud83c\udf73';
-    const text = `${medal} #${rank} on Tao Easter Event!\n\n\ud83c\udf1f ${score} pts \u00b7 ${kills} eats\n\nCan you crack my score? \ud83e\udd5a\nThe #Bittensor egg game by @taoswap_org\n\nhttps://ee.taoswap.org`;
+    const text = `${medal} #${rank} on Tao Easter Event!\n\n\ud83c\udf1f ${score} pts \u00b7 ${kills} \ud83e\udd5a eats\n\nCan you crack my score?\nThe #Bittensor egg game by @taoswap_org\n\nhttps://ee.taoswap.org`;
     window.open(
       `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`,
       '_blank'

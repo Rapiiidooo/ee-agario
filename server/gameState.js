@@ -1,14 +1,14 @@
 // gameState.js — Authoritative game state & tick logic
 
-const MAP_SIZE = 6789;
-const MAX_ENTITIES = 25;
-const TICK_RATE = 30;
-const SESSION_DURATION = 4 * 60 * 1000; // 4 minutes
+const MAP_SIZE = 5678;
+const MAX_ENTITIES = 20;
+const TICK_RATE = 20;
+const SESSION_DURATION = 3.5 * 60 * 1000; // 3:30 minutes
 const BASE_SPEED = 200; // px/sec at min size
 const MIN_RADIUS = 20;  // absolute minimum (speed calc, decay threshold)
 const SPAWN_RADIUS = 28; // starting size for new/respawned eggs
 const MAX_RADIUS = 1000;
-const FOOD_COUNT = 1000;
+const FOOD_COUNT = 800;
 const FOOD_RADIUS = 6;
 const EGG_RATIO = 1.25; // ry = radius * EGG_RATIO (egg is taller than wide)
 const HITBOX_SHRINK = 0.85; // hitbox is 85% of visual egg size

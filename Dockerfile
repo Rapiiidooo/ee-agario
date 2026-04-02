@@ -10,6 +10,10 @@ RUN npm ci --production
 
 COPY server/ ./server/
 COPY client/ ./client/
+COPY scripts/ ./scripts/
+
+# Pre-fetch identities at build time and bake into the image
+RUN node scripts/seed-identities.js
 
 # Data volume for SQLite persistence
 VOLUME /app/data

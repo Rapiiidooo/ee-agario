@@ -3,7 +3,7 @@
 const VERSION = '1.0.0';
 
 import { createServer } from 'http';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { randomBytes } from 'crypto';
@@ -119,7 +119,22 @@ const upsertImage = db.prepare('INSERT OR REPLACE INTO identity_images (hash, na
 const getAllImages = db.prepare('SELECT hash, name, content_type, data FROM identity_images');
 
 function loadIdentitiesFromDb() {
-  const rows = getAllImages.all();
+  let rows = getAllImages.all();
+  // If no cached images, try to import from seed DB baked into the Docker image
+  if (rows.length === 0) {
+    const seedPath = join(__dirname, '..', 'identities-seed.db');
+    if (existsSync(seedPath)) {
+      console.log('Importing identities from seed DB...');
+      const seedDb = new Database(seedPath);
+      const seedRows = seedDb.prepare('SELECT hash, name, content_type, data FROM identity_images').all();
+      for (const r of seedRows) {
+        try { upsertImage.run(r.hash, r.name, r.content_type, r.data); } catch (_) {}
+      }
+      seedDb.close();
+      rows = getAllImages.all();
+      console.log(`Imported ${rows.length} identities from seed`);
+    }
+  }
   if (rows.length === 0) return false;
   identities = [];
   imageCache.clear();
@@ -131,91 +146,6 @@ function loadIdentitiesFromDb() {
   return true;
 }
 
-async function fetchIdentities(forceRefresh = false) {
-  // Try DB cache first for instant startup
-  const hadCache = loadIdentitiesFromDb();
-
-  // Skip refresh if cache is recent (< 1 hour) unless forced
-  if (hadCache && !forceRefresh) {
-    const newest = db.prepare('SELECT MAX(fetched_at) as t FROM identity_images').get();
-    if (newest?.t) {
-      const age = Date.now() - new Date(newest.t + 'Z').getTime();
-      if (age < 3600000) {
-        console.log(`Identity cache fresh (${Math.round(age / 60000)}min old), skipping refresh`);
-        return;
-      }
-    }
-  }
-
-  // Refresh from API
-  try {
-    const res = await fetch('https://api.taoswap.org/identities/');
-    const data = await res.json();
-    const entries = Object.values(data.results || data)
-      .filter(e => e.name && e.name !== '-' && e.name !== 'N/A' && e.image && e.image !== '-' && e.image !== '' && !e.image.includes('N/A') && e.image.startsWith('http'))
-      .map(e => ({ name: e.name, image: e.image }));
-
-    let subnetEntries = [];
-    try {
-      const subRes = await fetch('https://api.taoswap.org/subnets/');
-      const subData = await subRes.json();
-      subnetEntries = Object.values(subData.results || subData)
-        .filter(s => s.identity?.image && s.identity.image !== '-' && s.identity.image.startsWith('http'))
-        .map(s => ({ name: s.identity.name || s.name || `SN${s.id}`, image: s.identity.image }));
-    } catch (_) {}
-
-    const all = [...entries, ...subnetEntries];
-    const seenUrls = new Set();
-    const candidates = all.filter(e => {
-      if (seenUrls.has(e.image)) return false;
-      seenUrls.add(e.image);
-      return true;
-    });
-
-    // Pre-load known hashes from DB to skip re-downloading
-    const seenHashes = new Map();
-    const dbRows = getAllImages.all();
-    for (const row of dbRows) seenHashes.set(row.hash, true);
-
-    const unique = [];
-    let proxyIdx = imageCache.size; // continue after cached entries
-    let skipped = 0;
-    const BATCH = 10;
-    const startTime = Date.now();
-    console.log(`Fetching ${candidates.length} identity images (${seenHashes.size} already cached)...`);
-    for (let i = 0; i < candidates.length; i += BATCH) {
-      const batch = candidates.slice(i, i + BATCH);
-      await Promise.allSettled(batch.map(async (id) => {
-        try {
-          const imgRes = await fetch(id.image, { signal: AbortSignal.timeout(10000) });
-          if (!imgRes.ok) return;
-          const contentType = imgRes.headers.get('content-type') || 'image/png';
-          const buf = Buffer.from(await imgRes.arrayBuffer());
-          const hash = await crypto.subtle.digest('SHA-256', buf);
-          const hex = [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
-          if (seenHashes.has(hex)) { skipped++; return; }
-          seenHashes.set(hex, true);
-          const pid = proxyIdx++;
-          imageCache.set(pid, { buffer: buf, contentType });
-          id.image = `/api/img/${pid}`;
-          unique.push(id);
-          try { upsertImage.run(hex, id.name, contentType, buf); } catch (_) {}
-        } catch (_) {}
-      }));
-      console.log(`  batch ${Math.floor(i / BATCH) + 1}/${Math.ceil(candidates.length / BATCH)} done (${unique.length} unique so far)`);
-    }
-
-    identities = unique;
-    if (unique.length > 0) {
-      // Reload from DB to get consistent proxy IDs
-      loadIdentitiesFromDb();
-    }
-    console.log(`Identity refresh done in ${((Date.now() - startTime) / 1000).toFixed(1)}s — ${unique.length} new, ${skipped} skipped, ${identities.length} total`);
-  } catch (err) {
-    console.error('Failed to fetch identities:', err.message);
-    if (!hadCache) console.error('No cached identities available');
-  }
-}
 
 // ── Game state ──
 
@@ -845,13 +775,12 @@ wss.on('connection', (ws) => {
 
 async function main() {
   await cryptoWaitReady();
-  await fetchIdentities();
+  loadIdentitiesFromDb();
   startNewSession();
 
   setInterval(gameLoop, 1000 / TICK_RATE);
-  setInterval(fetchIdentities, 10 * 60 * 1000);
 
-  server.listen(PORT, () => {
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`[EE Taoswap v${VERSION}]`);
   });
 }

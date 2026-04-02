@@ -2013,7 +2013,7 @@ async function showEaten(msg) {
   lbEl.innerHTML = list.map((p, i) => `<div class="global-lb-row">
     <span class="glb-rank">${i + 1}</span>
     <span class="glb-name">${esc(p.name)}</span>
-    <span class="glb-xp">${p.xp} xp</span>
+    <span class="glb-xp">${p.best_score} best</span>
   </div>`).join('');
 
   const overlay = document.getElementById('eaten-overlay');
@@ -2204,7 +2204,7 @@ function renderGlobalLeaderboard(full) {
     ${list.map((p, i) => `<div class="global-lb-row">
       <span class="glb-rank">${i + 1}</span>
       <span class="glb-name">${esc(p.name)}</span>
-      <span class="glb-xp">${p.xp} xp</span>
+      <span class="glb-xp">${p.best_score} best</span>
     </div>`).join('')}
   `;
 }
@@ -2240,8 +2240,8 @@ function showReturningPanel() {
   const statsEl = document.getElementById('player-stats');
   if (playerStats) {
     statsEl.innerHTML = `
-      <div class="stat-box"><div class="icon">&#11088;</div><div class="val">${(playerStats.xp || 0).toLocaleString()}</div><div class="lbl">Total XP</div></div>
       <div class="stat-box"><div class="icon">&#127942;</div><div class="val">${(playerStats.best_score || 0).toLocaleString()}</div><div class="lbl">Best Score</div></div>
+      <div class="stat-box"><div class="icon">&#11088;</div><div class="val">${(playerStats.xp || 0).toLocaleString()}</div><div class="lbl">Total XP</div></div>
       <div class="stat-box"><div class="icon">&#127922;</div><div class="val">${playerStats.games_played || 0}</div><div class="lbl">Games</div></div>
     `;
     const nameInput = document.getElementById('name-input');

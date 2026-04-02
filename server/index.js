@@ -465,8 +465,8 @@ const server = createServer((req, res) => {
       return `<tr>
         <td class="rank">${medal(i)}</td>
         <td class="name-cell"><div class="name-main">${p.name.replace(/</g,'&lt;')}</div>${walletHtml}</td>
-        <td class="stat xp">${p.xp.toLocaleString()}</td>
-        <td class="stat">${p.best_score.toLocaleString()}</td>
+        <td class="stat xp">${p.best_score.toLocaleString()}</td>
+        <td class="stat">${p.xp.toLocaleString()}</td>
         <td class="stat">${p.games_played}</td>
       </tr>`;
     }).join('');
@@ -511,7 +511,7 @@ th:nth-child(3),th:nth-child(4),th:nth-child(5){text-align:right}
   <div class="subtitle">${top.length} player${top.length !== 1 ? 's' : ''} ranked</div>
   <div class="card">
     <table>
-      <thead><tr><th></th><th>Player</th><th>XP</th><th>Best</th><th>Games</th></tr></thead>
+      <thead><tr><th></th><th>Player</th><th>Best</th><th>XP</th><th>Games</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   </div>

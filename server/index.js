@@ -68,22 +68,24 @@ db.exec(`
 // Migrations for existing DBs
 try { db.exec('ALTER TABLE scores ADD COLUMN address TEXT'); } catch (_) {}
 try { db.exec('CREATE UNIQUE INDEX idx_players_name ON players(name)'); } catch (_) {}
+try { db.exec('ALTER TABLE players ADD COLUMN total_kills INTEGER DEFAULT 0'); } catch (_) {}
 
 const insertGame = db.prepare('INSERT INTO games (duration_sec) VALUES (?)');
 const insertScore = db.prepare('INSERT INTO scores (game_id, name, score, kills, rank, is_bot, address) VALUES (?, ?, ?, ?, ?, ?, ?)');
 const upsertPlayer = db.prepare(`
-  INSERT INTO players (address, name, xp, best_score, games_played, last_seen)
-  VALUES (?, ?, ?, ?, 1, datetime('now'))
+  INSERT INTO players (address, name, xp, best_score, games_played, total_kills, last_seen)
+  VALUES (?, ?, ?, ?, 1, ?, datetime('now'))
   ON CONFLICT(address) DO UPDATE SET
     xp = players.xp + excluded.xp,
     best_score = MAX(players.best_score, excluded.best_score),
     games_played = players.games_played + 1,
+    total_kills = players.total_kills + excluded.total_kills,
     last_seen = datetime('now')
 `);
 const getPlayer = db.prepare('SELECT * FROM players WHERE address = ?');
 const getPlayerByName = db.prepare('SELECT * FROM players WHERE name = ?');
 const claimGuest = db.prepare(`UPDATE players SET address = ? WHERE address = ?`);
-const getTopPlayers = db.prepare('SELECT address, name, xp, best_score, games_played FROM players ORDER BY best_score DESC');
+const getTopPlayers = db.prepare('SELECT address, name, xp, best_score, games_played, total_kills FROM players ORDER BY best_score DESC LIMIT 100');
 
 function saveLeaderboard(leaderboard) {
   const game = insertGame.run(SESSION_DURATION / 1000);
@@ -93,7 +95,7 @@ function saveLeaderboard(leaderboard) {
     if (e.isBot) continue;
     try { insertScore.run(gameId, e.name, e.score, e.kills, e.rank, 0, e.address || null); } catch (_) {}
     const playerKey = e.address || `guest:${e.name}`;
-    try { upsertPlayer.run(playerKey, e.name, e.score, e.score); } catch (err) { console.error('upsertPlayer failed:', err.message, playerKey, e.name); }
+    try { upsertPlayer.run(playerKey, e.name, e.score, e.score, e.kills || 0); } catch (err) { console.error('upsertPlayer failed:', err.message, playerKey, e.name); }
   }
   return gameId;
 }
@@ -466,6 +468,7 @@ const server = createServer((req, res) => {
         <td class="rank">${medal(i)}</td>
         <td class="name-cell"><div class="name-main">${p.name.replace(/</g,'&lt;')}</div>${walletHtml}</td>
         <td class="stat xp">${p.best_score.toLocaleString()}</td>
+        <td class="stat">${(p.total_kills || 0).toLocaleString()}</td>
         <td class="stat">${p.xp.toLocaleString()}</td>
         <td class="stat">${p.games_played}</td>
       </tr>`;
@@ -502,7 +505,7 @@ td.rank{width:40px;text-align:center;font-size:18px}
 .guest{font-size:10px;color:rgba(255,255,255,0.2);font-style:italic}
 td.stat{font-family:'DM Mono',monospace;font-size:13px;color:rgba(255,255,255,0.6);text-align:right}
 td.xp{color:#00dbbc;font-weight:500}
-th:nth-child(3),th:nth-child(4),th:nth-child(5){text-align:right}
+th:nth-child(3),th:nth-child(4),th:nth-child(5),th:nth-child(6){text-align:right}
 .footer{text-align:center;margin-top:24px;font-size:11px;color:rgba(255,255,255,0.2)}
 </style></head><body>
 <div class="container">
@@ -511,7 +514,7 @@ th:nth-child(3),th:nth-child(4),th:nth-child(5){text-align:right}
   <div class="subtitle">${top.length} player${top.length !== 1 ? 's' : ''} ranked</div>
   <div class="card">
     <table>
-      <thead><tr><th></th><th>Player</th><th>Best</th><th>XP</th><th>Games</th></tr></thead>
+      <thead><tr><th></th><th>Player</th><th>Best</th><th>Eats</th><th>XP</th><th>Games</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   </div>
@@ -691,7 +694,14 @@ wss.on('connection', (ws) => {
               return;
             }
             // Register the player with initial stats
-            upsertPlayer.run(ws._address, name, 0, 0);
+            upsertPlayer.run(ws._address, name, 0, 0, 0);
+          }
+        } else {
+          // Guest — block name if taken by a wallet player
+          const taken = getPlayerByName.get(name);
+          if (taken && !taken.address.startsWith('guest:')) {
+            ws.send(JSON.stringify({ type: 'join_error', message: `Name "${name}" is already taken by a wallet player` }));
+            return;
           }
         }
 
@@ -777,12 +787,12 @@ wss.on('connection', (ws) => {
       // Save score on disconnect (aggregate all pieces)
       const playerKey = info.address || (ws._name ? `guest:${ws._name}` : null);
       if (playerKey && state) {
-        let totalScore = 0;
+        let totalScore = 0, totalKills = 0;
         for (const e of state.entities.values()) {
-          if (e.ownerId === ownerId) totalScore += e.score;
+          if (e.ownerId === ownerId) { totalScore += e.score; totalKills += e.kills || 0; }
         }
         if (totalScore > 0) {
-          try { upsertPlayer.run(playerKey, ws._name || 'Player', totalScore, totalScore); } catch (_) {}
+          try { upsertPlayer.run(playerKey, ws._name || 'Player', totalScore, totalScore, totalKills); } catch (_) {}
         }
       }
 

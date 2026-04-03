@@ -2013,7 +2013,7 @@ async function showEaten(msg) {
   lbEl.innerHTML = list.map((p, i) => `<div class="global-lb-row">
     <span class="glb-rank">${i + 1}</span>
     <span class="glb-name">${esc(p.name)}</span>
-    <span class="glb-xp">${p.best_score} best</span>
+    <span class="glb-xp">${p.best_score} best \u00b7 ${p.total_kills || 0}e</span>
   </div>`).join('');
 
   const overlay = document.getElementById('eaten-overlay');
